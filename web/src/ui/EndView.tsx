@@ -9,7 +9,7 @@ export function EndView() {
       <div className={'orders ' + (clear ? 'go' : 'bad')}>
         <div className="ot">{clear ? `Stage ${R.stage} cleared.` : 'The run is over.'}</div>
       </div>
-      <div>
+      <div className="endwrap">
         {s ? (
           <div className={'stamp ' + (s.profit >= 0 ? '' : 'bad')}>
             <h3>{s.profit >= 0 ? 'PROFIT ' + s.profit : 'LOSS ' + Math.abs(s.profit)}</h3>

@@ -166,3 +166,38 @@ svg.map{display:block;width:100%;height:auto}
 .legend .pt{color:var(--hot)} .legend .en{color:var(--pass)} .legend .lt{color:#b48ee0} .legend .wp{color:var(--blue)}
 
 .boot{padding:40px 0;text-align:center;font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--dim)}
+
+.abandon{margin-top:16px;display:flex;align-items:center;gap:10px;opacity:.75}
+.abandon button{font-size:9.5px;padding:7px 9px;color:var(--dim)}
+.abandon button.warn{color:var(--fail);opacity:1}
+.abandon span{font-family:var(--mono);font-size:9px;color:#4d6b8a;letter-spacing:.05em}
+
+/* ---- layout: single column on mobile (original order via `order`),
+        three-column command deck on wide screens ---- */
+.cols{display:flex;flex-direction:column}
+.col{display:contents}
+.cols section{min-width:0}
+.o1{order:1}.o2{order:2}.o3{order:3}.o4{order:4}.o5{order:5}.o6{order:6}
+
+@media (min-width:1080px){
+  .wrap{max-width:1280px;padding:0 22px}
+  .hud{margin:0 -22px;padding:10px 22px}
+  .hud .brand{font-size:26px}
+  .g b{font-size:16px} .g span{font-size:8.5px}
+  .gauges{gap:14px}
+  .orders{margin:0 -22px 4px;padding:12px 22px;top:50px}
+  .orders .ot{font-size:24px}
+  .cols{display:grid;grid-template-columns:minmax(300px,340px) minmax(420px,1fr) minmax(330px,400px);gap:0 24px;align-items:start;margin-top:6px}
+  .col{display:block}
+  .grid{gap:6px}
+  .cell .ic{width:34px;height:34px}
+  .cell .code{font-size:9.5px;margin-top:4px}
+  .cell .ht{font-size:10.5px;top:4px;right:5px}
+  .cell .brt{font-size:9px;top:4px;left:5px}
+  .cell .tag{font-size:9px}
+  .hulls{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:940px;margin:18px auto 0}
+  .hulls .lane{margin-bottom:0;display:flex;flex-direction:column}
+  .hulls .lane button{margin-top:auto;padding-top:12px}
+  .endwrap{max-width:560px;margin:0 auto}
+  .boot{padding:80px 0}
+}

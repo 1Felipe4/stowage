@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   accept, buyFuel, buyMod, callIt, coord, doWarp, here, hire, jettison, jump, outEdges,
-  payOff, sellMod, sellRate, sellValue, shipOK, stuck, tapBay, tapHold, toggleFocus
+  payOff, scuttle, sellMod, sellRate, sellValue, shipOK, stuckReason, tapBay, tapHold, toggleFocus
 } from '../engine/actions'
 import { capacity, evaluate, fuelCap, massOf, modOf, souls, deckCrew, surcharge } from '../engine/core'
 import { HIRES, KINDS, MOD, TILES, bayName } from '../engine/data'
@@ -14,6 +14,25 @@ import { Icon } from './Icon'
 function NeedTag({ w }: { w: Why }) {
   if (!w.need) return null
   return <i className="tagneed">NEED{w.need > 1 ? ` ×${w.need}` : ''}</i>
+}
+
+/* Two-tap scuttle: no lock state may ever strand a run, so this is always
+   reachable — but never one accidental tap away. */
+function ScuttleButton() {
+  const [armed, setArmed] = useState(false)
+  useEffect(() => {
+    if (!armed) return
+    const t = window.setTimeout(() => setArmed(false), 4000)
+    return () => window.clearTimeout(t)
+  }, [armed])
+  return (
+    <div className="abandon">
+      <button className={armed ? 'warn' : ''} onClick={() => (armed ? scuttle() : setArmed(true))}>
+        {armed ? 'TAP AGAIN — SINK THE RUN' : 'SCUTTLE SHIP'}
+      </button>
+      <span>{armed ? 'Ends the run as a bust.' : 'If you have truly worked yourself into a corner.'}</span>
+    </div>
+  )
 }
 
 export function RunView() {
@@ -32,7 +51,7 @@ export function RunView() {
   })
 
   const dropHere = R.cargo.filter((c) => !c.done && c.to === R.at)
-  const isStuck = stuck()
+  const stuckWhy = stuckReason()
 
   const warpWhy = n.warp ? (!shipOK() ? 'DECK FAILS INSPECTION' : R.fuel < R.warpCost ? `NEED ${R.warpCost} FUEL` : null) : null
   const forf = R.cargo.filter((c) => c.taken && !c.done)
@@ -64,7 +83,9 @@ export function RunView() {
         <div className="ot">{o.t}</div>
         <div className="os">{o.s}</div>
       </div>
-      <div>
+      <div className="cols">
+        <div className="col">
+        <section className="o1">
         {R.event && (
           <div className="ev">
             <div className="et">EN ROUTE · {R.event.t}</div>
@@ -281,6 +302,8 @@ export function RunView() {
           </div>
         )}
 
+        </section>
+        <section className="o2">
         <h2 className="sec">
           CREW · {souls()} SOULS · {deckCrew()} WORKING THE DECK
         </h2>
@@ -306,7 +329,43 @@ export function RunView() {
             )
           })}
         </div>
+        </section>
+        <section className="o5">
+        <h2 className="sec">
+          CONTRACTS · {R.cargo.filter((c) => c.done).length} OF {R.cargo.length} DELIVERED
+        </h2>
+        <div className="card">
+          {R.cargo.map((c) => {
+            const st = c.done
+              ? 'PAID'
+              : c.aboard
+                ? `ABOARD → ${coord(R.nodes[c.to])}`
+                : c.taken
+                  ? 'SET DOWN'
+                  : `${coord(R.nodes[c.at])} → ${coord(R.nodes[c.to])}`
+            return (
+              <div className={'row ' + (c.done ? 'got' : '')} key={'con' + c.i}>
+                <div className="l">
+                  <Icon k="CARGO" />
+                  <div>
+                    <div className="nm">
+                      {c.short} · {c.name}
+                    </div>
+                    <div className="ds">
+                      {c.rule} Pays {c.fee}.
+                    </div>
+                  </div>
+                </div>
+                <div className="at">{st}</div>
+              </div>
+            )
+          })}
+        </div>
+        </section>
+        </div>
 
+        <div className="col">
+        <section className="o3">
         <h2 className="sec">
           DECK ·{' '}
           {bad.length ? (
@@ -459,6 +518,11 @@ export function RunView() {
           )}
         </div>
 
+        </section>
+        </div>
+
+        <div className="col">
+        <section className="o4">
         <h2 className="sec">LANES OUT OF {coord(n)}</h2>
         {outEdges().map((e) => {
           const d = R.nodes[e.b],
@@ -568,37 +632,25 @@ export function RunView() {
           )
         })}
 
-        <h2 className="sec">
-          CONTRACTS · {R.cargo.filter((c) => c.done).length} OF {R.cargo.length} DELIVERED
-        </h2>
-        <div className="card">
-          {R.cargo.map((c) => {
-            const st = c.done
-              ? 'PAID'
-              : c.aboard
-                ? `ABOARD → ${coord(R.nodes[c.to])}`
-                : c.taken
-                  ? 'SET DOWN'
-                  : `${coord(R.nodes[c.at])} → ${coord(R.nodes[c.to])}`
-            return (
-              <div className={'row ' + (c.done ? 'got' : '')} key={'con' + c.i}>
-                <div className="l">
-                  <Icon k="CARGO" />
-                  <div>
-                    <div className="nm">
-                      {c.short} · {c.name}
-                    </div>
-                    <div className="ds">
-                      {c.rule} Pays {c.fee}.
-                    </div>
+        {stuckWhy && (
+          <div className="card" style={{ borderColor: 'var(--fail)', marginTop: 12 }}>
+            <div className="row">
+              <div className="l">
+                <div>
+                  <div className="nm" style={{ color: 'var(--fail)' }}>
+                    NOTHING LEFT TO BURN
                   </div>
+                  <div className="ds">{stuckWhy}</div>
                 </div>
-                <div className="at">{st}</div>
               </div>
-            )
-          })}
-        </div>
-
+              <button className="warn" onClick={callIt}>
+                CALL IT
+              </button>
+            </div>
+          </div>
+        )}
+        </section>
+        <section className="o6">
         <details className="ref" open>
           <summary>SECTOR CHART · PLAN {R.seed}</summary>
           <div className="mapbox" dangerouslySetInnerHTML={{ __html: chartSvg() }} />
@@ -610,23 +662,7 @@ export function RunView() {
           </div>
         </details>
 
-        {isStuck && (
-          <div className="card" style={{ borderColor: 'var(--fail)', marginTop: 12 }}>
-            <div className="row">
-              <div className="l">
-                <div>
-                  <div className="nm" style={{ color: 'var(--fail)' }}>
-                    NOTHING LEFT TO BURN
-                  </div>
-                  <div className="ds">No lane you can afford, no fuel for sale, nothing to sell.</div>
-                </div>
-              </div>
-              <button className="warn" onClick={callIt}>
-                CALL IT
-              </button>
-            </div>
-          </div>
-        )}
+        <ScuttleButton />
 
         {R.log.length > 0 && (
           <div className="log">
@@ -638,6 +674,8 @@ export function RunView() {
             ))}
           </div>
         )}
+        </section>
+        </div>
       </div>
     </>
   )

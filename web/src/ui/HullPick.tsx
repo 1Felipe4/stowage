@@ -8,7 +8,7 @@ export function HullPick() {
         <div className="ot">Pick a hull.</div>
         <div className="os">You keep it between stages. It decides what work you can take.</div>
       </div>
-      <div>
+      <div className="hulls">
         {HULLS.map((hl, i) => (
           <div className="lane" key={hl.id}>
             <div className="lh">

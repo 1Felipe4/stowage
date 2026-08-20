@@ -258,21 +258,41 @@ export function doWarp() {
   touch()
 }
 
-export function stuck(): boolean {
-  if (R.over) return false
+/** Why this run can no longer move, or null if it still can. Covers the two
+    hard locks: fuel starvation, and an engine count no purchase here can fix
+    (a deck that fails THRUST never burns, regardless of fuel). */
+export function stuckReason(): string | null {
+  if (R.over) return null
   const out = outEdges()
-  if (!out.length) return true
-  const cheapest = Math.min(...out.map((e) => e.cost + surcharge()))
-  if (R.fuel >= cheapest) return false
+  if (!out.length) return 'No lanes lead out of this rock.'
   const n = here()
+  const sellables = [...R.grid, ...R.hold].filter((k): k is string => !!k && k[0] !== '@')
+  const canSell = sellRate() > 0 && sellables.length > 0
+  const engines = sellables.filter((k) => k === 'THR').length
+  if (engines < 2) {
+    if (!n.stock.includes('THR')) return `${engines} of 2 engines aboard and no thruster for sale here. This deck will never clear.`
+    const raisable = R.credits + (canSell ? sellables.filter((k) => k !== 'THR').reduce((a, k) => a + sellValue(k as ModCode), 0) : 0)
+    if (raisable < MOD.THR.price)
+      return `A thruster costs ${MOD.THR.price} and everything aboard would only raise ${raisable}. This deck will never clear.`
+  }
+  const cheapest = Math.min(...out.map((e) => e.cost + surcharge()))
+  if (R.fuel >= cheapest) return null
   const canBuy = n.fuel > 0 && R.credits >= n.fuel && fuelCap() > R.fuel
-  const canSell = sellRate() > 0 && (R.hold.some((k) => k[0] !== '@') || R.grid.some((k) => k && k[0] !== '@'))
-  return !canBuy && !canSell
+  if (canBuy || canSell) return null
+  return 'No lane you can afford, no fuel for sale, nothing to sell.'
 }
 
 export function callIt() {
   R.over = 'bust'
   R.overWhy = 'Stranded with nothing left to sell'
+  R.summary = null
+  touch()
+}
+
+/** The always-available escape hatch — no lock state may ever strand a run. */
+export function scuttle() {
+  R.over = 'bust'
+  R.overWhy = `You scuttled the ship at ${coord(here())}`
   R.summary = null
   touch()
 }
