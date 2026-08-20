@@ -1,0 +1,14 @@
+[build]
+  base = "web"
+  command = "npm install --prefix .. && npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+  # Render service URL — adjust if Render assigns a different slug
+  VITE_SERVER_URL = "https://stowage-server.onrender.com"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

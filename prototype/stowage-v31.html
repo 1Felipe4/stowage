@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#081120"><title>STOWAGE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#081120;--line:#1e3a5c;--blue:#4FD1E0;--paper:#E4EDF4;--dim:#7e9bb8;--hot:#F2793D;
+ --burn:#E8452F;--cool:#6FA8FF;--pass:#57D9A3;--fail:#FF6B6B;--cell:#122540;--gold:#E8B84B;
+ --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;--sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+ --disp:"Big Shoulders Display","Arial Narrow",Impact,sans-serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{background:var(--ink);background-image:linear-gradient(rgba(79,209,224,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(79,209,224,.04) 1px,transparent 1px);
+ background-size:26px 26px;color:var(--paper);font-family:var(--sans);font-size:15px;line-height:1.45;
+ padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 24px);-webkit-text-size-adjust:100%}
+.wrap{max-width:440px;margin:0 auto;padding:0 14px}
+.hud{position:sticky;top:0;z-index:20;background:rgba(8,17,32,.97);border-bottom:1px solid var(--line);
+ backdrop-filter:blur(6px);margin:0 -14px;padding:9px 14px;display:flex;gap:10px;align-items:center}
+.hud .brand{font-family:var(--disp);font-weight:900;font-size:21px;line-height:.9;overflow:hidden}
+.hud .brand em{font-style:normal;color:var(--blue)}
+.gauges{margin-left:auto;display:flex;gap:9px;font-family:var(--mono);flex-shrink:0}
+.g{text-align:right;line-height:1.15}
+.g b{display:block;font-weight:600;font-size:14px}
+.g span{font-size:7.5px;letter-spacing:.08em;color:var(--dim);white-space:nowrap}
+.g.cr b{color:var(--gold)} .g.fu b{color:var(--blue)} .g.low b{color:var(--fail)} .g.st b{color:var(--pass)}
+
+/* the one line that tells you what to do */
+.orders{position:sticky;top:47px;z-index:19;margin:0 -14px 4px;padding:11px 14px;border-bottom:1px solid var(--line);
+ background:rgba(10,24,42,.98);backdrop-filter:blur(6px);border-left:4px solid var(--blue)}
+.orders .ot{font-family:var(--disp);font-weight:700;font-size:21px;line-height:1.05}
+.orders .os{font-size:12.5px;color:var(--dim);margin-top:2px;line-height:1.35}
+.orders.bad{border-left-color:var(--fail)} .orders.bad .ot{color:var(--fail)}
+.orders.buy{border-left-color:var(--gold)} .orders.buy .ot{color:var(--gold)}
+.orders.go{border-left-color:var(--pass)} .orders.go .ot{color:var(--pass)}
+.orders.do{border-left-color:var(--blue)}
+
+.ev{border:1px solid var(--hot);background:rgba(242,121,61,.08);padding:9px 11px;margin-top:12px}
+.ev .et{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--hot)}
+.ev .ex{font-size:13px;margin-top:3px}
+
+h2.sec{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--blue);margin:18px 0 7px;font-weight:500}
+h2.sec em{font-style:normal} .warnt{color:var(--fail)} .okt{color:var(--pass)}
+
+.card{border:1px solid var(--line);background:rgba(13,28,49,.72)}
+.row{display:grid;grid-template-columns:1fr auto;gap:9px;align-items:center;padding:9px 10px;border-bottom:1px solid rgba(30,58,92,.6)}
+.row:last-child{border-bottom:0}
+.row .l{display:flex;gap:9px;align-items:flex-start;min-width:0}
+.row .l .ic{width:20px;height:20px;flex:0 0 20px;color:var(--paper);margin-top:1px}
+.row .nm{font-family:var(--mono);font-size:11px;letter-spacing:.04em}
+.row .ds{font-size:11.5px;color:var(--dim);line-height:1.35;margin-top:2px}
+.row.want{background:rgba(232,184,75,.07)} .row.want .l .ic{color:var(--gold)}
+.row.hot .l .ic{color:var(--hot)} .row.hot .nm{color:var(--hot)}
+.row.got .nm{color:var(--pass)}
+.row .at{font-family:var(--mono);font-size:9.5px;color:var(--blue);letter-spacing:.08em}
+.row.got .at{color:var(--pass)}
+.tagneed{font-style:normal;font-size:8px;color:var(--gold);border:1px solid var(--gold);padding:0 3px;margin-left:4px}
+.btns{display:flex;gap:4px}
+.none{padding:11px;font-size:12.5px;color:var(--dim)}
+
+button{font-family:var(--mono);font-size:11px;letter-spacing:.07em;padding:9px 11px;border:1px solid var(--line);
+ background:var(--cell);color:var(--paper);cursor:pointer;white-space:nowrap}
+button.pri{background:var(--blue);color:#04101c;border-color:var(--blue);font-weight:600}
+button.warn{border-color:var(--fail);color:var(--fail)}
+button.wide{width:100%;padding:12px;margin-top:8px}
+button[disabled]{opacity:.35;cursor:not-allowed}
+button:focus-visible,.cell:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.cell{position:relative;aspect-ratio:1;border:1px solid var(--line);background:var(--cell);display:flex;
+ flex-direction:column;align-items:center;justify-content:center;font-family:var(--mono);cursor:pointer;overflow:hidden}
+.cell:active{transform:scale(.96)}
+.cell.empty{background:repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(30,58,92,.3) 5px,rgba(30,58,92,.3) 6px)}
+.cell .ic{width:24px;height:24px;color:var(--paper);opacity:.92}
+.cell .code{font-size:8px;font-weight:600;text-align:center;line-height:1.05;margin-top:2px}
+.cell .tag{font-size:7.5px;color:var(--dim)} .cell .tag.empty-t{color:#3f5f80;font-style:italic}
+.cell .ht{position:absolute;top:2px;right:3px;font-size:8.5px;color:var(--dim)}
+.cell .brt{position:absolute;top:2px;left:3px;font-size:7.5px;color:#3f5f80}
+.cell.warm .ht{color:var(--hot)} .cell.chill .ht{color:var(--cool)}
+.cell.over{border-color:var(--burn);box-shadow:inset 0 0 0 1px var(--burn)} .cell.over .ht{color:var(--burn)}
+.cell.sel{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+.cell.foc{border-color:var(--blue);background:rgba(79,209,224,.13);box-shadow:0 0 0 1px var(--blue)}
+.cell.cargo{background:#241a2e;border-color:var(--hot)} .cell.cargo .ic,.cell.cargo .code{color:var(--hot)}
+.cell.rct .ic,.cell.rct .code{color:var(--gold)}
+.cell.cold .ic,.cell.cold .code{color:var(--cool)}
+
+.hold{border:1px solid var(--gold);background:rgba(232,184,75,.07);padding:8px 10px;margin-top:8px}
+.hint{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--gold)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.chip{font-family:var(--mono);font-size:10.5px;padding:6px 8px;display:inline-flex;align-items:center;gap:5px}
+.chip .ic{width:14px;height:14px;flex:0 0 14px}
+.chip.sel{border-color:var(--blue);color:var(--blue)}
+.chip.cargo{border-color:var(--hot);color:var(--hot)}
+
+.checks{border:1px solid var(--line);margin-top:8px}
+.chk{display:grid;grid-template-columns:16px 1fr;gap:8px;padding:8px 10px;border-bottom:1px solid rgba(30,58,92,.6)}
+.chk:last-child{border-bottom:0}
+.chk .mk{font-family:var(--mono);font-size:12px}
+.chk.ok .mk{color:var(--pass)} .chk.no .mk{color:var(--fail)}
+.chk .lb{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;display:flex;gap:6px;align-items:center}
+.chk.no .lb{color:var(--fail)} .chk.tap{cursor:pointer}
+.chk .dt{font-size:11.5px;color:var(--dim);margin-top:2px}
+.chk .pin{font-size:7.5px;color:var(--blue);border:1px solid rgba(79,209,224,.45);padding:0 3px}
+
+.lane{border:1px solid var(--line);background:rgba(13,28,49,.72);padding:10px;margin-bottom:8px}
+.lane .lh{display:flex;justify-content:space-between;align-items:baseline}
+.lane .lc{font-family:var(--disp);font-weight:700;font-size:22px}
+.lane .lf{font-family:var(--mono);font-size:10px;color:var(--blue);letter-spacing:.08em}
+.lane .lb2{font-size:12px;color:var(--dim);margin-top:3px;line-height:1.4}
+.lane .hotb{color:var(--hot)} .lane .okb{color:var(--pass)} .lane .wantb{color:var(--gold)}
+.peek{margin-top:8px;border:1px solid rgba(30,58,92,.9);background:rgba(8,17,32,.5)}
+.peek summary{font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--blue);padding:8px 10px;cursor:pointer;list-style:none}
+.peek summary::-webkit-details-marker{display:none}
+.peek summary::after{content:" +";float:right}
+.peek[open] summary::after{content:" \2212"}
+.pk{border-top:1px solid rgba(30,58,92,.9)}
+.pr{display:flex;padding:8px 10px;border-bottom:1px solid rgba(30,58,92,.5)}
+.pr:last-of-type{border-bottom:0}
+.pr .l{display:flex;gap:9px;align-items:flex-start}
+.pr .l .ic{width:18px;height:18px;flex:0 0 18px;color:var(--paper);margin-top:1px}
+.pr .nm{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em}
+.pr .ds{font-size:11.5px;color:var(--dim);line-height:1.35;margin-top:2px}
+.pr.want{background:rgba(232,184,75,.07)} .pr.want .l .ic{color:var(--gold)}
+.pr.hot .l .ic{color:var(--hot)} .pr.hot .nm{color:var(--hot)}
+.pnote{padding:7px 10px;font-family:var(--mono);font-size:9px;color:#4d6b8a;letter-spacing:.06em;
+ border-top:1px solid rgba(30,58,92,.5)}
+
+.ref{border:1px solid var(--line);background:rgba(13,28,49,.6);margin-top:8px}
+.ref summary{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--blue);padding:11px;cursor:pointer;list-style:none}
+.ref summary::-webkit-details-marker{display:none}
+.ref summary::after{content:" +";float:right} .ref[open] summary::after{content:" −"}
+.mapbox{padding:4px 8px 10px}
+svg.map{display:block;width:100%;height:auto}
+.map .ln{stroke:var(--line);stroke-width:1.2;fill:none}
+.map .ln.open{stroke:var(--blue);stroke-width:1.8}
+.map .ln.done{stroke:rgba(87,217,163,.5);stroke-width:1.6}
+.map .nd{fill:var(--cell);stroke:var(--line);stroke-width:1.4}
+.map .nd.open{stroke:var(--blue);stroke-width:2}
+.map .nd.here{fill:#123a45;stroke:var(--blue);stroke-width:2.5}
+.map .nd.done{stroke:rgba(87,217,163,.55)}
+.map .nd.part{stroke:var(--hot)} .map .nd.end{stroke:var(--pass);fill:none}
+.map text{font-family:var(--mono);font-size:7px;fill:var(--dim);letter-spacing:.05em}
+.map text.co{font-size:6.5px;fill:#4d6b8a} .map text.pt{fill:var(--hot)} .map text.en{fill:var(--pass)}
+
+.stamp{border:2px solid var(--pass);padding:12px;margin-top:14px;background:rgba(87,217,163,.07);transform:rotate(-.5deg)}
+.stamp.bad{border-color:var(--fail);background:rgba(255,107,107,.07)}
+.stamp h3{font-family:var(--disp);font-weight:900;font-size:30px;margin:0;line-height:.9;color:var(--pass)}
+.stamp.bad h3{color:var(--fail)} .stamp p{margin:6px 0 0;font-size:13px}
+.stamp .sub{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.12em;margin-top:7px}
+.log{font-family:var(--mono);font-size:10px;color:#4d6b8a;margin-top:12px;line-height:1.7}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+.g.ms b{color:var(--paper)}
+.row.warp{background:rgba(87,217,163,.08)} .row.warp .l .ic{color:var(--pass)} .row.warp .nm{color:var(--pass)}
+.gold{color:var(--gold)}
+.lane .warpb{color:var(--blue)} .lane .ltb{color:#b48ee0}
+.cell.shd .ic{color:#9fb6cc}
+.ev.ok{border-color:var(--pass);background:rgba(87,217,163,.08)} .ev.ok .et{color:var(--pass)}
+.pl{margin-top:10px;border-top:1px solid rgba(30,58,92,.8)}
+.pl>div{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(30,58,92,.5);gap:10px}
+.pl>div:last-child{border-bottom:0;padding-top:8px}
+.pl dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--dim);margin:0}
+.pl dd{margin:0;font-family:var(--mono);font-size:13px}
+.pl .up{color:var(--pass)} .pl .dn{color:var(--fail)}
+.stamp h3{font-size:34px}
+/* chart marks */
+.map .nd.warpring{stroke:var(--blue);fill:none;stroke-dasharray:3 3}
+.map .nd.drop{stroke:#7a5ea8;fill:none}
+.map .nd.drop.live{stroke:var(--pass);stroke-width:2}
+.map text.pt{fill:var(--hot)} .map text.en{fill:var(--pass)} .map text.lt{fill:#b48ee0} .map text.wp{fill:var(--blue)}
+.map tspan.pt{fill:var(--hot)} .map tspan.en{fill:var(--pass)} .map tspan.lt{fill:#b48ee0}
+.legend{display:flex;flex-wrap:wrap;gap:8px;padding:0 10px 10px}
+.legend .lg{font-family:var(--mono);font-size:8.5px;letter-spacing:.06em}
+.legend .pt{color:var(--hot)} .legend .en{color:var(--pass)} .legend .lt{color:#b48ee0} .legend .wp{color:var(--blue)}
+</style></head><body>
+<div class="wrap">
+ <div class="hud"><div class="brand">STOW<em>AGE</em></div><div class="gauges" id="gauges"></div></div>
+ <div class="orders" id="orders"></div><div id="view"></div>
+</div>
+<script>/* ================= STOWAGE v3.1 — engine ================= */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function seedNum(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+function makeSeed(){return Math.floor(Math.random()*0xFFFFFF).toString(36).toUpperCase().padStart(5,"0")}
+
+const W=4,H=5,TILES=20;
+const NB=Array.from({length:TILES},(_,i)=>{const r=(i/W)|0,c=i%W,o=[];
+  if(r>0)o.push(i-W); if(r<H-1)o.push(i+W); if(c>0)o.push(i-1); if(c<W-1)o.push(i+1); return o});
+function bayName(i){return "ABCD"[i%W]+(((i/W)|0)+1)}
+
+const MOD={
+ RCT:{code:"RCT",icon:"RCT",name:"Reactor",short:"REACTOR",tok:["P +6","H +3"],power:6,heat:3,spill:1,price:42,
+   blurb:"6 power, the most of any bay. Runs at +3 heat and pushes +1 into every touching bay unless shielding blocks it."},
+ BAT:{code:"BAT",icon:"BAT",name:"Battery",short:"BATTERY",tok:["P +2"],power:2,heat:0,price:16,
+   blurb:"2 power, cold and quiet. A third the output of a reactor for the same bay."},
+ RAD:{code:"RAD",icon:"RAD",name:"Radiator",short:"RADIATOR",tok:["P −1","cool 3"],power:-1,heat:0,cool:3,price:26,
+   blurb:"Pulls 3 heat from every bay it touches, never its own. Half wasted in a corner, doubled in the middle."},
+ CRY:{code:"CRY",icon:"CRY",name:"Cryo unit",short:"CRYO",tok:["P −3","cool 2"],power:-3,heat:0,cool:2,price:38,
+   blurb:"Pulls 2 heat from touching bays. The heaviest power draw aboard, and the only thing cold chain will accept."},
+ LSP:{code:"LSP",icon:"LSP",name:"Life support",short:"LIFE SUP",tok:["P −1","air 2"],power:-1,heat:1,price:22,
+   blurb:"Air for 2 souls. Costs 1 power and runs at +1 heat."},
+ BRT:{code:"BRT",icon:"BRT",name:"Crew bunks",short:"BUNKS",tok:["sleeps 2"],power:0,heat:0,price:14,
+   blurb:"Sleeping space for 2. Free to run, but it is pure mass."},
+ THR:{code:"THR",icon:"THR",name:"Thruster",short:"THRUSTER",tok:["P −2","+4 cap"],power:-2,heat:2,price:32,
+   blurb:"Each engine lifts 4 more bays. It occupies one itself, so the net gain is 3. Two is the legal minimum."},
+ SHD:{code:"SHD",icon:"SHD",name:"Shielding",short:"SHIELD",tok:["blocks heat"],power:0,heat:0,price:19,
+   blurb:"Contains volatile cargo, and stops reactor heat spilling through it. Inert otherwise."},
+ TNK:{code:"TNK",icon:"TNK",name:"Fuel tank",short:"FUEL TANK",tok:["holds 6"],power:0,heat:0,fuel:6,price:24,
+   blurb:"Holds 6 fuel. Weighs the same empty as full, so a spent tank is ballast worth dumping."},
+};
+const KINDS={
+ volatile:{id:"volatile",name:"Volatile compound",pay:1.45,weight:1,crew:0,support:"SHD",
+   rule:"Every bay touching it must hold shielding. Vacuum does not contain."},
+ cold:{id:"cold",name:"Cold chain crate",pay:1.25,weight:1,crew:0,support:"CRY",
+   rule:"Its bay must read 0 heat or lower, with a cryo unit alongside."},
+ living:{id:"living",name:"Livestock pen",pay:1.10,weight:1,crew:2,support:"LSP",need:"VET",
+   rule:"Life support alongside, and tenders to work it."},
+ unbraced:{id:"unbraced",name:"Unbraced mass",pay:1.10,weight:2,crew:0,support:null,
+   rule:"Two touching bays left clear to brace against. Weighs double."},
+ instrument:{id:"instrument",name:"Calibrated instrument",pay:1.00,weight:1,crew:0,support:null,
+   rule:"No reactor or thruster may touch it."},
+};
+const HIRES={
+ HAND:{id:"HAND",name:"Deckhand",price:26,deck:true,blurb:"Runs 4 occupied bays. Needs a bunk, air, and wages."},
+ HAZMAT:{id:"HAZMAT",name:"Hazmat handler",price:48,spec:"HAZMAT",blurb:"Every volatile crate may leave one face unshielded. Does not work the deck."},
+ VET:{id:"VET",name:"Stock vet",price:48,spec:"VET",blurb:"Livestock needs one tender instead of two. Does not work the deck."},
+};
+const HULLS=[
+ {id:"freighter",name:"Standard freighter",base:4,credits:1.0,crew:["HAND","HAND"],
+  mods:["RCT","THR","THR","LSP","BRT","TNK","TNK"],blurb:"Balanced and forgiving. Two engines, two tanks, room to grow."},
+ {id:"hauler",name:"Long-hauler",base:6,credits:1.0,crew:["HAND","HAND"],
+  mods:["RCT","THR","LSP","BRT","TNK","TNK","TNK"],blurb:"Enormous range on three tanks — but one engine, so it is illegal until you buy a second."},
+ {id:"tug",name:"Tug",base:2,credits:1.0,crew:["HAND","HAND"],
+  mods:["RCT","RCT","THR","THR","THR","LSP","BRT"],blurb:"Three engines and power to spare. No tanks at all, so you refuel constantly."},
+ {id:"liner",name:"Liner",base:4,credits:0.8,crew:["HAND","HAND","HAND","VET"],
+  mods:["RCT","THR","THR","LSP","LSP","BRT","BRT","TNK"],blurb:"Crewed and bunked from the start, with a vet aboard. Half your bays are gone before you load anything."},
+];
+
+let R=null, sel=null, focus=[], view="hull";
+
+function modOf(k){
+  if(!k) return null;
+  if(k[0]==="@"){const c=R.cargo[+k.slice(1)];
+    return {code:k,icon:"CARGO",name:c.name,short:c.short,tok:["cargo"],power:0,heat:0,cargo:c};}
+  return MOD[k];
+}
+function cnt(k){return R.grid.filter(v=>v===k).length}
+function heatField(g){
+  const h=new Array(TILES).fill(0);
+  for(let i=0;i<TILES;i++){
+    let v=0; const m=modOf(g[i]); if(m) v+=m.heat;
+    if(g[i]!=="SHD") for(const j of NB[i]){          // shielding blocks spill into its own bay
+      const n=modOf(g[j]); if(!n) continue;
+      if(n.spill) v+=n.spill;
+    }
+    for(const j of NB[i]){const n=modOf(g[j]); if(n&&n.cool) v-=n.cool}
+    h[i]=v;
+  }
+  return h;
+}
+function fuelCap(g){let c=0;for(const k of (g||R.grid)) if(k==="TNK") c+=MOD.TNK.fuel; return c}
+function tenders(){let n=0;R.cargo.forEach(c=>{if(c.aboard) n+=(c.crew?(R.specs.includes("VET")?1:2):0)});return n}
+function souls(){return R.crew.length+tenders()}
+function deckCrew(){return R.crew.filter(c=>HIRES[c].deck).length+tenders()}
+function massOf(g){
+  let m=0;
+  for(const k of (g||R.grid)){ if(!k) continue;
+    m += (k[0]==="@") ? KINDS[R.cargo[+k.slice(1)].kind].weight : 1;
+  }
+  return m;
+}
+function capacity(g){return Math.min(R.hull.base+4*((g||R.grid).filter(k=>k==="THR").length), 4*deckCrew())}
+function surcharge(g){return Math.ceil(Math.max(0,massOf(g)-capacity(g))/2)}
+function laneCost(e){return e.cost+surcharge()}
+
+function evaluate(g){
+  const heat=heatField(g), chk=[], HEATCAP=5;
+  const at=k=>{const o=[];for(let i=0;i<TILES;i++) if(g[i]===k)o.push(i);return o};
+  const push=(lb,ok,dt,f)=>chk.push({lb,ok,dt,focus:f||[]});
+
+  push("ALL STOWED",R.hold.length===0,R.hold.length?`${R.hold.length} item${R.hold.length>1?"s":""} loose in the hold.`:"Nothing loose in the hold.");
+
+  let prod=0,draw=0;
+  for(let i=0;i<TILES;i++){const m=modOf(g[i]); if(!m)continue; if(m.power>0)prod+=m.power; else draw+=-m.power}
+  push("POWER",prod>=draw,prod>=draw?`${prod} made, ${draw} drawn.`:`Short ${draw-prod} power.`);
+
+  const hot=[]; for(let i=0;i<TILES;i++) if(g[i]&&heat[i]>HEATCAP) hot.push(i);
+  push("HEAT",hot.length===0,hot.length===0?`No bay above ${HEATCAP}.`
+    :hot.map(i=>`${modOf(g[i]).name} at ${bayName(i)} reads ${heat[i]}`).join(". ")+".",hot);
+
+  const thr=at("THR").length;
+  push("THRUST",thr>=2,thr>=2?`${thr} engines fitted.`:`${thr} of 2 engines. You cannot move.`,at("THR"));
+
+  const s=souls();
+  const bc=at("BRT").length*2;
+  push("BUNKS",bc>=s,bc>=s?`${bc} bunks for ${s}.`:`${bc} bunks, ${s-bc} with nowhere to sleep.`,at("BRT"));
+  const ac=at("LSP").length*2;
+  push("LIFE SUPPORT",ac>=s,ac>=s?`Air for ${ac}, ${s} aboard.`:`Air for ${ac}. ${s-ac} short.`,at("LSP"));
+
+  const fc=fuelCap(g);
+  push("FUEL TANKS",fc>=R.fuel,fc>=R.fuel?`${R.fuel} of ${fc} held.`:`${R.fuel-fc} fuel would be vented.`,at("TNK"));
+
+  R.cargo.forEach((c,n)=>{
+    if(!c.aboard) return;
+    const i=g.indexOf("@"+n); if(i<0){push(c.short,false,"Not in a bay.");return}
+    const nb=NB[i];
+    if(c.kind==="volatile"){
+      const bare=nb.filter(j=>g[j]!=="SHD");
+      const allow=R.specs.includes("HAZMAT")?1:0;
+      push(c.short,bare.length<=allow,bare.length<=allow
+        ?(allow&&bare.length?`Contained, one face open under your handler.`:`Contained on all ${nb.length} faces.`)
+        :`${bare.length-allow} bay${bare.length-allow>1?"s":""} touching it hold no shielding.`,[i].concat(bare));
+    } else if(c.kind==="cold"){
+      const cry=nb.some(j=>g[j]==="CRY"), ok=cry&&heat[i]<=0;
+      push(c.short,ok,ok?`Holding at ${heat[i]}.`:!cry?"No cryo unit alongside.":`Bay reads ${heat[i]}, needs 0 or lower.`,[i].concat(nb));
+    } else if(c.kind==="living"){
+      const ok=nb.some(j=>g[j]==="LSP");
+      push(c.short,ok,ok?"Air reaches the pens.":"No life support alongside.",[i].concat(nb));
+    } else if(c.kind==="unbraced"){
+      const clear=nb.filter(j=>!g[j]).length+(4-nb.length);
+      push(c.short,clear>=2,clear>=2?`${clear} clear faces bracing it.`:`Only ${clear} clear face. Needs 2.`,[i].concat(nb));
+    } else {
+      const bad=nb.filter(j=>g[j]==="RCT"||g[j]==="THR");
+      push(c.short,bad.length===0,bad.length===0?"Nothing vibrating alongside."
+        :`${bad.map(j=>modOf(g[j]).name).join(", ")} touching it.`,[i].concat(bad));
+    }
+  });
+  return {checks:chk,ok:chk.every(c=>c.ok),heat};
+}
+
+/* ---- can a given set of parts physically be arranged? ---- */
+function scoreLayout(g){return evaluate(g).checks.filter(c=>!c.ok).length}
+function fits(bag,restarts,steps,rng){
+  rng=rng||Math.random; restarts=restarts||70; steps=steps||260;
+  if(bag.length>TILES) return null;
+  const keepHold=R.hold, keepGrid=R.grid; R.hold=[];
+  const idx=[...Array(TILES).keys()];
+  let out=null;
+  for(let t=0;t<restarts&&!out;t++){
+    for(let i=idx.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]]}
+    const g=new Array(TILES).fill(null); bag.forEach((k,n)=>{g[idx[n]]=k});
+    R.grid=g; let s=scoreLayout(g);
+    if(s===0){out=g.slice();break}
+    for(let q=0;q<steps;q++){
+      const a=Math.floor(rng()*TILES),b=Math.floor(rng()*TILES);
+      if(a===b||(!g[a]&&!g[b]))continue;
+      const tm=g[a];g[a]=g[b];g[b]=tm;
+      const ns=scoreLayout(g);
+      if(ns<=s){s=ns; if(s===0){out=g.slice();break}} else {g[b]=g[a];g[a]=tm}
+    }
+  }
+  R.hold=keepHold; R.grid=keepGrid;
+  return out;
+}
+
+/* ================= map ================= */
+function dijkstra(src){
+  const n=R.nodes.length, dist=new Array(n).fill(1e9); dist[src]=0;
+  const seen=new Array(n).fill(false);
+  for(let k=0;k<n;k++){
+    let u=-1,b=1e9;
+    for(let i=0;i<n;i++) if(!seen[i]&&dist[i]<b){b=dist[i];u=i}
+    if(u<0)break; seen[u]=true;
+    for(const e of R.adj[u]) if(dist[u]+e.cost<dist[e.to]) dist[e.to]=dist[u]+e.cost;
+  }
+  return dist;
+}
+function buildAdj(){
+  R.adj=R.nodes.map(()=>[]);
+  R.edges.forEach(e=>{R.adj[e.a].push({to:e.b,cost:e.cost}); R.adj[e.b].push({to:e.a,cost:e.cost})});
+}
+
+/* ================= the solver =================
+   One Held-Karp pass over every pickup/drop point covers all contract
+   subsets at once. For each subset it returns the cheapest precedence-
+   respecting route that ends at a warp point, and the profit that yields.  */
+function solveStage(){
+  const C=R.cargo, n=C.length;
+  const pts=[]; C.forEach((c,i)=>{pts.push({t:"p",node:c.at,c:i}); pts.push({t:"d",node:c.to,c:i})});
+  const m=pts.length, FULL=1<<m;
+  const D=R.D;
+  const INF=1e9;
+  const dp=new Float64Array(FULL*m).fill(INF);
+  for(let i=0;i<m;i++) if(pts[i].t==="p") dp[(1<<i)*m+i]=D[R.at][pts[i].node];
+  for(let mask=1;mask<FULL;mask++){
+    for(let last=0;last<m;last++){
+      const cur=dp[mask*m+last]; if(cur>=INF) continue;
+      for(let nx=0;nx<m;nx++){
+        if(mask>>nx&1) continue;
+        if(pts[nx].t==="d" && !(mask>>(2*pts[nx].c)&1)) continue;   // pickup first
+        const nm=mask|(1<<nx), v=cur+D[pts[last].node][pts[nx].node];
+        if(v<dp[nm*m+nx]) dp[nm*m+nx]=v;
+      }
+    }
+  }
+  const warps=R.nodes.filter(x=>x.warp).map(x=>x.id);
+  const toWarp=node=>Math.min(...warps.map(w=>D[node][w]));
+  let best={profit:-1e9,set:[],fuel:0};
+  for(let mask=0;mask<FULL;mask++){
+    // a subset is valid only when each contract is wholly in or wholly out
+    let ok=true, set=[];
+    for(let i=0;i<n;i++){
+      const p=(mask>>(2*i))&1, d=(mask>>(2*i+1))&1;
+      if(p!==d){ok=false;break}
+      if(p) set.push(i);
+    }
+    if(!ok) continue;
+    let route;
+    if(mask===0) route=toWarp(R.at);
+    else{
+      route=INF;
+      for(let last=0;last<m;last++){
+        const v=dp[mask*m+last];
+        if(v<INF) route=Math.min(route,v+toWarp(pts[last].node));
+      }
+    }
+    if(route>=INF) continue;
+    const p=planCost(set,route);
+    if(p.profit>best.profit) best={profit:p.profit,set,fuel:p.fuel,spend:p.spend,revenue:p.revenue};
+  }
+  return best;
+}
+function planCost(set,route){
+  const picked=set.map(i=>R.cargo[i]);
+  let bays=R.grid.filter(Boolean).length, crew=R.crew.length, extraPower=0, buy=0;
+  const have={}; R.grid.forEach(k=>{if(k)have[k]=(have[k]||0)+1});
+  let shields=0, cryo=0;
+  picked.forEach(c=>{
+    bays+=KINDS[c.kind].weight;
+    if(c.kind==="volatile") shields+=Math.max(0,2-(R.specs.includes("HAZMAT")?1:0));
+    if(c.kind==="cold"){cryo=Math.max(cryo,1); extraPower+=3}
+    if(c.kind==="living") crew+=R.specs.includes("VET")?1:2;
+  });
+  const needSh=Math.max(0,shields-(have.SHD||0)), needCr=Math.max(0,cryo-(have.CRY||0));
+  buy+=needSh*MOD.SHD.price+needCr*MOD.CRY.price;
+  bays+=needSh+needCr;
+  // hires to work the deck, then bunks and air for everyone
+  let hands=R.crew.filter(c=>HIRES[c].deck).length;
+  const needHands=Math.max(0,Math.ceil(bays/4)-hands);
+  buy+=needHands*HIRES.HAND.price; crew+=needHands;
+  const pairs=Math.ceil(crew/2);
+  const needB=Math.max(0,pairs-(have.BRT||0)), needL=Math.max(0,pairs-(have.LSP||0));
+  buy+=needB*MOD.BRT.price+needL*MOD.LSP.price; bays+=needB+needL; extraPower+=needL;
+  // power to cover the new draw
+  let prod=0,draw=0;
+  R.grid.forEach(k=>{const mm=modOf(k); if(!mm)return; if(mm.power>0)prod+=mm.power; else draw+=-mm.power});
+  const shortfall=Math.max(0,(draw+extraPower)-prod);
+  const batts=Math.ceil(shortfall/2);
+  buy+=batts*MOD.BAT.price; bays+=batts;
+  // fuel, including the overweight tax on every lane
+  const cap=Math.min(R.hull.base+4*(have.THR||0),4*(hands+needHands));
+  const over=Math.ceil(Math.max(0,bays-cap)/2);
+  const lanes=Math.max(1,Math.round(route/3));
+  const fuel=route+over*lanes+R.warpCost;
+  const price=R.medFuel;
+  const revenue=picked.reduce((a,c)=>a+c.fee,0);
+  const wages=crew*R.wage;
+  const spend=fuel*price+buy+wages;
+  return {profit:revenue-spend,fuel,spend,revenue,bays,crew};
+}
+
+/* ================= stage generation ================= */
+function genStage(seed,stage,carry){
+  const rng=mulberry32(seedNum(seed));
+  for(let attempt=0;attempt<40;attempt++){
+    const ROWS=8, rows=[], nodes=[]; let id=0;
+    for(let r=0;r<ROWS;r++){
+      const c=(r===0)?1:2+Math.floor(rng()*2), row=[];
+      for(let i=0;i<c;i++){nodes.push({id:id++,r,c:i,n:c,fuel:0,port:false,warp:false,stock:[],hires:[]});row.push(nodes[nodes.length-1])}
+      rows.push(row);
+    }
+    const edges=[];
+    const link=(a,b,cost)=>edges.push({a,b,cost});
+    for(let r=0;r<ROWS-1;r++){
+      const a=rows[r],b=rows[r+1];
+      a.forEach((nd,i)=>{
+        const t=Math.min(b.length-1,Math.round(i*(b.length-1)/Math.max(1,a.length-1)||0));
+        const set=new Set([t]);
+        if(rng()<.6) set.add(Math.max(0,Math.min(b.length-1,t+(rng()<.5?-1:1))));
+        set.forEach(j=>link(nd.id,b[j].id,2+Math.floor(rng()*3)));
+      });
+      b.forEach(nd=>{if(!edges.some(e=>e.b===nd.id||e.a===nd.id)) link(a[Math.floor(rng()*a.length)].id,nd.id,3)});
+    }
+    rows.forEach(row=>{ if(row.length>1&&rng()<.5){const i=Math.floor(rng()*(row.length-1)); link(row[i].id,row[i+1].id,2+Math.floor(rng()*2))} });
+
+    nodes.forEach(nd=>{
+      if(nd.r===0){nd.fuel=4;nd.port=true;nd.rate=0.5+rng()*0.15;return}
+      if(rng()<.55) nd.fuel=3+Math.floor(rng()*4);
+      if(rng()<.45){nd.port=true; nd.rate=0.45+rng()*0.25}
+    });
+    // warp points: one shallow, one deep, sometimes more
+    const warpRows=[2+Math.floor(rng()*2), 5+Math.floor(rng()*2)];
+    if(rng()<.5) warpRows.push(3+Math.floor(rng()*3));
+    warpRows.forEach(r=>{const row=rows[Math.min(ROWS-1,r)]; const nd=row[Math.floor(rng()*row.length)];
+      nd.warp=true; if(!nd.fuel) nd.fuel=4+Math.floor(rng()*3)});
+    if(!nodes.some(nd=>nd.warp)) rows[ROWS-1][0].warp=true;
+
+    const nC=Math.min(5,3+Math.floor((stage-1)/2));
+    const kinds=Object.keys(KINDS);
+    const names=["CRATE A","CRATE B","CRATE C","CRATE D","CRATE E"];
+    const cargo=[];
+    for(let i=0;i<nC;i++){
+      const k=KINDS[kinds[Math.floor(rng()*kinds.length)]];
+      let p=1+Math.floor(rng()*(nodes.length-1)), d=1+Math.floor(rng()*(nodes.length-1));
+      while(d===p) d=1+Math.floor(rng()*(nodes.length-1));
+      cargo.push({i,kind:k.id,name:k.name,short:names[i],rule:k.rule,need:k.need||null,support:k.support,
+        crew:k.crew,at:p,to:d,taken:false,aboard:false,done:false,fee:0});
+    }
+
+    const grid=carry?carry.grid.slice():new Array(TILES).fill(null);
+    const hull=carry?carry.hull:R.hull;
+    if(!carry) hull.mods.forEach((k,i)=>{grid[i<4?i*1:(i+1)]=k});
+
+    R={seed,stage,cleared:carry?carry.cleared:0,hull,nodes,edges,rows,cargo,grid,hold:[],
+       crew:carry?carry.crew.slice():hull.crew.slice(),specs:carry?carry.specs.slice():hull.crew.filter(c=>HIRES[c].spec).map(c=>HIRES[c].spec),
+       fuel:0,credits:carry?carry.credits:0,at:0,visited:[0],log:[],over:null,event:null,
+       accepted:[],opening:0,revenue:0,spend:0,
+       wage:16+2*(stage-1), warpCost:4+(stage-1), margin:55};
+    if(!carry){ // lay the starting hull out properly
+      R.grid=new Array(TILES).fill(null);
+      const laid=fits(hull.mods.slice(),120,320,rng);
+      if(!laid) continue;
+      R.grid=laid;
+    }
+    R.fuel=Math.min(carry?carry.fuel:14,fuelCap());
+    buildAdj();
+    R.D=R.nodes.map((_,i)=>dijkstra(i));
+    const fuels=R.nodes.filter(nd=>nd.fuel).map(nd=>nd.fuel).sort((a,b)=>a-b);
+    R.medFuel=fuels.length?fuels[fuels.length>>1]:5;
+    if(!R.nodes.some(nd=>nd.warp)) continue;
+
+    // stock the ports, guaranteeing the parts this stage's work demands
+    const musts=new Set(["BRT","LSP","TNK","BAT"]);
+    cargo.forEach(c=>{if(c.support)musts.add(c.support)});
+    const ports=R.nodes.filter(nd=>nd.port);
+    if(!ports.length) continue;
+    ports[0].stock=[...musts,"RCT","THR"]; ports[0].hires=["HAND"]; if(!ports[0].rate)ports[0].rate=0.55;
+    cargo.forEach(c=>{if(c.need&&!ports[0].hires.includes(c.need))ports[0].hires.push(c.need)});
+    const keys=Object.keys(MOD);
+    ports.slice(1).forEach(nd=>{
+      const st=new Set(); for(let i=0;i<2+Math.floor(rng()*3);i++) st.add(keys[Math.floor(rng()*keys.length)]);
+      nd.stock=[...st];
+      nd.hires = rng()<.5?["HAND"]:[];
+      if(rng()<.35){const extra=cargo.find(c=>c.need); if(extra&&!nd.hires.includes(extra.need)) nd.hires.push(extra.need)}
+    });
+
+    // freight pricing, then the repair loop
+    const priceAll=()=>R.cargo.forEach(c=>{c.fee=Math.round((12*R.D[c.at][c.to]+R.margin+6*stage)*KINDS[c.kind].pay)});
+    priceAll();
+    let best=solveStage(), repairs=0;
+    while(best.profit<floorProfit()&&repairs<10){ R.margin+=8; priceAll(); best=solveStage(); repairs++ }
+    if(best.profit<floorProfit()) continue;
+
+    // and prove the winning subset can actually be arranged on the deck
+    const bag=R.grid.filter(Boolean).slice();
+    best.set.forEach(i=>bag.push("@"+i));
+    R.cargo.forEach(c=>c.aboard=false);
+    best.set.forEach(i=>{R.cargo[i].aboard=true});
+    const kc=R.crew; R.crew=kc.slice();
+    let feasible=bag.length<=TILES && !!fits(bag,60,240,rng);
+    R.crew=kc; R.cargo.forEach(c=>c.aboard=false);
+    if(!feasible) continue;
+
+    R.opening=R.credits; R.best=best; R.repairs=repairs;
+    return R;
+  }
+  return genStage(seed+"X",stage,carry);
+}
+function floorProfit(){return 40+6*(R?R.stage:1)}
+
+/* ================= STOWAGE v3.1 — interface ================= */
+const ICONS={
+ CARGO:'<rect x="3.5" y="6.5" width="17" height="13"/><path d="M3.5 6.5L12 3l8.5 3.5M3.5 10.5h17M12 3v3.5M8 10.5v9M16 10.5v9"/>',
+ RCT:'<circle cx="12" cy="12" r="2.4"/><ellipse cx="12" cy="12" rx="9" ry="3.6"/><ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9" ry="3.6" transform="rotate(-60 12 12)"/>',
+ BAT:'<rect x="2.5" y="7.5" width="16" height="9" rx="1"/><path d="M18.5 10.5h3v3h-3"/><path d="M11.5 9l-2.6 3.6h2.6L10.4 16"/>',
+ RAD:'<rect x="4" y="6" width="16" height="12"/><path d="M8 6v12M12 6v12M16 6v12"/><path d="M6 3.5c1.5 1 1.5 1.5 0 2.5M18 3.5c1.5 1 1.5 1.5 0 2.5"/>',
+ CRY:'<path d="M12 2.5v19M4 7l16 10M4 17L20 7"/><path d="M9.6 4.4L12 6.2l2.4-1.8M9.6 19.6L12 17.8l2.4 1.8"/>',
+ LSP:'<path d="M12 3.5v9M9.5 4h5"/><path d="M12 9.5C10.5 7 8.5 6.6 7 7.9c-1.4 1.2-1.8 3.5-1.6 6.1.2 2.6 1 4.4 2.4 4.7 1.6.3 2.6-.9 2.9-2.6.2-1.3.3-3.3.3-4.6"/><path d="M12 9.5c1.5-2.5 3.5-2.9 5-1.6 1.4 1.2 1.8 3.5 1.6 6.1-.2 2.6-1 4.4-2.4 4.7-1.6.3-2.6-.9-2.9-2.6-.2-1.3-.3-3.3-.3-4.6"/>',
+ BRT:'<path d="M2.5 19.5v-8M2.5 14.5h19v5M21.5 19.5v-7a2.5 2.5 0 00-2.5-2.5h-7v4.5"/><circle cx="7" cy="11.8" r="2.1"/>',
+ THR:'<path d="M9 2.5h6l2.2 9H6.8z"/><path d="M7.5 11.5h9l-1.2 4h-6.6z"/><path d="M10 17.5v3.8M12 17.8v4M14 17.5v3.8"/>',
+ SHD:'<path d="M12 2.5l8.5 3.2v6.1c0 5.2-3.7 8.8-8.5 9.7-4.8-.9-8.5-4.5-8.5-9.7V5.7z"/><path d="M12 8v6"/>',
+ TNK:'<rect x="6" y="4.5" width="12" height="15" rx="3"/><path d="M6 9h12M9.5 4.5V2.5h5v2"/><path d="M9 13.5h6v4H9z"/>',
+ CREW:'<circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-4 3.2-6.5 7-6.5s7 2.5 7 6.5"/>',
+ FUEL:'<path d="M12 2.5s6 6.3 6 10.6a6 6 0 01-12 0C6 8.8 12 2.5 12 2.5z"/><path d="M9.5 14.2c.4 1.7 1.4 2.6 2.9 2.8"/>',
+ PORT:'<circle cx="12" cy="12" r="7.5"/><path d="M12 4.5v15M4.5 12h15"/>',
+ WARP:'<circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.8 2.8M16.2 16.2L19 19M19 5l-2.8 2.8M7.8 16.2L5 19"/>',
+ MASS:'<path d="M4 20h16L12 4z"/><path d="M8 15h8"/>',
+};
+function svg(k,c){return '<svg class="ic '+(c||'')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">'+(ICONS[k]||'')+'</svg>'}
+function el(i){return document.getElementById(i)}
+function coord(n){return "ABCDEFGHIJ"[n.r]+(n.c+1)}
+function here(){return R.nodes[R.at]}
+function outEdges(){return R.adj[R.at].map(e=>({a:R.at,b:e.to,cost:e.cost}))}
+function shipOK(){return evaluate(R.grid).ok}
+function say(t){R.log.unshift(t);R.log=R.log.slice(0,6)}
+function save(){try{localStorage.setItem("stowage:v31",JSON.stringify(stripped()))}catch(e){}}
+function stripped(){const c={...R}; delete c.D; delete c.adj; return c}
+
+/* ---- travel events ---- */
+const EVENTS=[
+ {id:"shift",w:3,t:"The load shifted",x:"Kit slid loose on the burn. Re-stow it.",
+  go(){const idx=[];for(let i=0;i<TILES;i++)if(R.grid[i])idx.push(i);
+    for(let n=0;n<3&&idx.length>1;n++){const a=idx[(Math.random()*idx.length)|0],b=idx[(Math.random()*idx.length)|0];
+      const t=R.grid[a];R.grid[a]=R.grid[b];R.grid[b]=t}}},
+ {id:"siphon",w:2,t:"Fuel siphoned",x:"Someone tapped your line. Two units gone.",go(){R.fuel=Math.max(0,R.fuel-2)}},
+ {id:"salvage",w:2,t:"Salvage claimed",x:"You stripped a working part off a dead hull.",
+  go(){const k=["BAT","SHD","BRT","RAD"][(Math.random()*4)|0];R.hold.push(k);R.salv=k}},
+ {id:"levy",w:2,t:"Transit levy",x:"A patrol read your manifest and charged you for it.",go(){R.credits=Math.max(0,R.credits-25);R.spend+=25}},
+ {id:"clear",w:6,t:null,x:null,go(){}},
+];
+function rollEvent(){
+  const pool=[];EVENTS.forEach(e=>{for(let i=0;i<e.w;i++)pool.push(e)});
+  const e=pool[(Math.random()*pool.length)|0]; e.go();
+  R.event=e.t?{t:e.t,x:e.x+(e.id==="salvage"?` A ${MOD[R.salv].short.toLowerCase()}.`:"")}:null;
+}
+
+/* ---- actions ---- */
+function jump(e){
+  const cost=e.cost+surcharge();
+  if(R.fuel<cost||!shipOK())return;
+  R.fuel-=cost; R.at=e.b; if(!R.visited.includes(e.b))R.visited.push(e.b);
+  sel=null; focus=[]; rollEvent();
+  say(`Burned ${cost} to ${coord(here())}.`);
+  dropOff(); save(); render();
+}
+function dropOff(){
+  const n=here(); let paid=0;
+  R.cargo.forEach((c,i)=>{
+    if(c.done||!c.aboard||c.to!==n.id)return;
+    const b=R.grid.indexOf("@"+i); if(b<0)return;
+    R.grid[b]=null; c.aboard=false; c.done=true; paid+=c.fee;
+    say(`${c.short} signed over for ${c.fee}.`);
+  });
+  if(paid){R.credits+=paid;R.revenue+=paid;R.paid=paid}
+}
+function accept(i){
+  const c=R.cargo[i];
+  if(c.taken||c.at!==R.at)return;
+  if(c.need&&!R.specs.includes(c.need))return;
+  if(!R.grid.includes(null))return;
+  c.taken=true;c.aboard=true;R.hold.push("@"+i);R.accepted.push(i);
+  say(`${c.short} signed for, bound for ${coord(R.nodes[c.to])}.`); save(); render();
+}
+function buyFuel(n){
+  const p=here().fuel; if(!p)return;
+  const amt=Math.min(n,fuelCap()-R.fuel,Math.floor(R.credits/p));
+  if(amt<=0)return; R.credits-=amt*p; R.spend+=amt*p; R.fuel+=amt; save(); render();
+}
+function buyMod(k){if(R.credits<MOD[k].price)return;R.credits-=MOD[k].price;R.spend+=MOD[k].price;R.hold.push(k);say(`Bought ${MOD[k].name}.`);save();render()}
+function sellRate(){const n=here();return n.port?(n.rate||0.55):0}
+function sellValue(k){return Math.floor(MOD[k].price*sellRate())}
+function sellMod(k,from,idx){
+  if(!sellRate())return;
+  if(from==="bay"){ if(R.grid[idx]!==k)return; R.grid[idx]=null }
+  else { const i=R.hold.indexOf(k); if(i<0)return; R.hold.splice(i,1) }
+  const v=sellValue(k); R.credits+=v; R.spend-=v;
+  if(k==="TNK"&&R.fuel>fuelCap()){const lost=R.fuel-fuelCap();R.fuel=fuelCap();say(`${lost} fuel vented with the tank.`)}
+  say(`Pawned ${MOD[k].name} for ${v}.`); sel=null; save(); render();
+}
+function hire(id){const h=HIRES[id];if(R.credits<h.price)return;R.credits-=h.price;R.spend+=h.price;R.crew.push(id);if(h.spec&&!R.specs.includes(h.spec))R.specs.push(h.spec);say(`Signed on a ${h.name.toLowerCase()}.`);save();render()}
+function payOff(i){
+  const id=R.crew[i];
+  if(HIRES[id].spec&&R.cargo.some(c=>c.aboard&&c.need===HIRES[id].spec))return;
+  R.crew.splice(i,1);
+  if(HIRES[id].spec&&!R.crew.includes(id)){const j=R.specs.indexOf(HIRES[id].spec);if(j>=0)R.specs.splice(j,1)}
+  say(`${HIRES[id].name} paid off.`); sel=null; save(); render();
+}
+function jettison(k){
+  const i=R.hold.indexOf(k);
+  if(i>=0)R.hold.splice(i,1); else {const j=R.grid.indexOf(k);if(j<0)return;R.grid[j]=null}
+  if(k[0]==="@"){const c=R.cargo[+k.slice(1)];c.aboard=false;c.taken=false;c.at=R.at;say(`${c.short} set down here.`)}
+  else{if(k==="TNK")R.fuel=Math.min(R.fuel,fuelCap());say(`${MOD[k].name} dumped.`)}
+  sel=null; save(); render();
+}
+function doWarp(){
+  const n=here(); if(!n.warp||R.fuel<R.warpCost||!shipOK())return;
+  R.fuel-=R.warpCost;
+  const wages=R.crew.length*R.wage;
+  const forfeits=R.cargo.filter(c=>c.taken&&!c.done);
+  const penalty=forfeits.reduce((a,c)=>a+Math.round(c.fee*0.5),0);
+  R.credits-=wages+penalty; R.spend+=wages+penalty;
+  R.summary={wages,penalty,forfeits:forfeits.map(c=>c.short),
+    opening:R.opening,revenue:R.revenue,spend:R.spend,
+    profit:R.credits-R.opening, best:Math.round(R.best.profit)};
+  R.over = R.credits<0 ? "bust" : "clear";
+  if(R.over==="clear")R.cleared++;
+  else R.overWhy="You could not cover the wage bill";
+  save(); render();
+}
+function stuck(){
+  if(R.over)return false;
+  const out=outEdges(); if(!out.length)return true;
+  const cheapest=Math.min(...out.map(e=>e.cost+surcharge()));
+  if(R.fuel>=cheapest)return false;
+  const n=here();
+  const canBuy=n.fuel>0&&R.credits>=n.fuel&&fuelCap()>R.fuel;
+  const canSell=sellRate()>0&&(R.hold.some(k=>k[0]!=="@")||R.grid.some(k=>k&&k[0]!=="@"));
+  return !canBuy&&!canSell;
+}
+
+/* ---- guidance ---- */
+function projSouls(){let n=R.crew.length;R.cargo.forEach(c=>{if(c.aboard)n+=(R.specs.includes("VET")?1:2)*(c.crew?1:0)});return n}
+function needTag(w){return w.need?` <i class="tagneed">NEED${w.need>1?" \u00d7"+w.need:""}</i>`:""}
+function whyMod(k){
+  const owned=[...R.grid.filter(Boolean),...R.hold], c=x=>owned.filter(v=>v===x).length, s=souls();
+  if(k==="BRT"){const d=Math.ceil((s-c("BRT")*2)/2);return d>0?{need:d,s:`${s-c("BRT")*2} with nowhere to sleep`}:{need:0,s:"spare bunks"}}
+  if(k==="LSP"){const d=Math.ceil((s-c("LSP")*2)/2);return d>0?{need:d,s:`${s-c("LSP")*2} without air`}:{need:0,s:"spare air"}}
+  if(k==="THR"){const d=2-c("THR");if(d>0)return{need:d,s:"you cannot move without two"};
+    const over=massOf()-capacity();return over>0?{need:1,s:`overweight by ${over} — an engine lifts 4 more`}:{need:0,s:"spare capacity"}}
+  if(k==="TNK"){const held=c("TNK")*MOD.TNK.fuel;
+    return{need:R.fuel>=held?1:0,s:`+6 range, and a bay of mass (you hold ${held})`}}
+  if(k==="SHD"){const v=R.cargo.filter(x=>x.aboard&&x.kind==="volatile").length;
+    return v?{need:Math.max(0,2*v-c("SHD")),s:"volatile cargo must be walled in"}:{need:0,s:"blocks reactor heat spill"}}
+  if(k==="CRY"){const v=R.cargo.some(x=>x.aboard&&x.kind==="cold");
+    return v&&c("CRY")<1?{need:1,s:"cold chain spoils without one"}:{need:0,s:"cooling, at 3 power"}}
+  if(k==="RAD")return{need:0,s:"pulls heat from touching bays"};
+  let prod=0,draw=0;owned.forEach(v=>{const m=modOf(v);if(!m)return;if(m.power>0)prod+=m.power;else draw+=-m.power});
+  return prod<draw?{need:Math.ceil((draw-prod)/2),s:`${draw-prod} power short`}:{need:0,s:`${prod-draw} power spare`};
+}
+function whyHire(id){
+  if(id==="HAND"){const gap=Math.ceil(massOf()/4)-deckCrew();
+    return gap>0?{need:gap,s:`the deck needs ${Math.ceil(massOf()/4)} hands to run, you have ${deckCrew()}`}:{need:0,s:"another body, another bunk"}}
+  const c=R.cargo.find(x=>x.need===HIRES[id].spec&&!x.done);
+  if(!c)return{need:0,s:"no work here needs one"};
+  if(R.specs.includes(HIRES[id].spec))return{need:0,s:"already aboard"};
+  return{need:1,s:`${c.short} at ${coord(R.nodes[c.at])} will not load without one`};
+}
+function orders(){
+  const n=here(),res=evaluate(R.grid),bad=res.checks.filter(c=>!c.ok);
+  if(R.hold.length){const m=modOf(R.hold[0]);return{k:"do",t:`Stow the ${m.short.toLowerCase()} in a clear bay.`,s:"Tap it in the hold, then tap an empty bay."}}
+  if(bad.length)return{k:"bad",t:`Deck fails inspection: ${bad[0].lb.toLowerCase()}.`,s:bad[0].dt+" You cannot burn until it clears."};
+  const avail=R.cargo.filter(c=>!c.taken&&!c.done&&c.at===R.at);
+  const open=avail.filter(c=>!(c.need&&!R.specs.includes(c.need)));
+  if(open.length&&R.grid.includes(null))
+    return{k:"do",t:`${open[0].short} is on offer here.`,s:`${coord(R.nodes[open[0].to])}, pays ${open[0].fee}. ${open[0].rule}`};
+  const gate=avail.find(c=>c.need&&!R.specs.includes(c.need));
+  if(gate)return{k:"buy",t:`${gate.short} needs a ${HIRES[gate.need].name.toLowerCase()}.`,s:n.hires.includes(gate.need)?"One is hiring here.":"None hiring here."};
+  const gap=n.stock.find(k=>whyMod(k).need&&R.credits>=MOD[k].price);
+  if(gap)return{k:"buy",t:`Buy a ${MOD[gap].short.toLowerCase()} here.`,s:`${whyMod(gap).s}. ${MOD[gap].price} credits.`};
+  const carrying=R.cargo.filter(c=>c.aboard);
+  if(carrying.length)return{k:"go",t:`Run ${carrying[0].short} to ${coord(R.nodes[carrying[0].to])}.`,s:`${carrying.length} aboard. Profit so far ${R.credits-R.opening}.`};
+  if(n.warp)return{k:"go",t:"You are standing on a warp point.",s:`Jump out for ${R.warpCost} fuel, or keep working this sector.`};
+  const free=R.cargo.filter(c=>!c.taken&&!c.done);
+  if(free.length)return{k:"go",t:`${free[0].short} is waiting at ${coord(R.nodes[free[0].at])}.`,s:`Pays ${free[0].fee}. Profit so far ${R.credits-R.opening}.`};
+  return{k:"go",t:"Nothing left worth taking.",s:"Make for a warp point and jump out."};
+}
+
+/* ---- render ---- */
+function render(){
+  if(view==="hull")return renderHull();
+  if(R.over)return renderEnd();
+  const res=evaluate(R.grid),o=orders(),n=here();
+  const m=massOf(),cap=capacity(),over=Math.max(0,m-cap);
+  el("gauges").innerHTML=
+   `<div class="g cr"><b>${R.credits}</b><span>CRED</span></div>
+    <div class="g fu ${R.fuel<=3?"low":""}"><b>${R.fuel}/${fuelCap()}</b><span>FUEL</span></div>
+    <div class="g ms ${over?"low":""}"><b>${m}/${cap}</b><span>MASS</span></div>
+    <div class="g st"><b>${R.stage}</b><span>STG</span></div>`;
+  el("orders").className="orders "+o.k;
+  el("orders").innerHTML=`<div class="ot">${o.t}</div><div class="os">${o.s}</div>`;
+
+  let h="";
+  if(R.event)h+=`<div class="ev"><div class="et">EN ROUTE &middot; ${R.event.t}</div><div class="ex">${R.event.x}</div></div>`;
+  if(R.paid){h+=`<div class="ev ok"><div class="et">DELIVERED</div><div class="ex">Signed over for ${R.paid} credits.</div></div>`;R.paid=null}
+
+  const dropHere=R.cargo.filter(c=>!c.done&&c.to===R.at);
+  h+=`<h2 class="sec">${coord(n)}${n.port?" &middot; TRADING PORT":""}${n.warp?" &middot; WARP POINT":""}${dropHere.length?` &middot; <em class="okt">DROP-OFF FOR ${dropHere.map(c=>c.short).join(", ")}</em>`:""}</h2><div class="card">`;
+  dropHere.filter(c=>!c.aboard).forEach(c=>{
+    h+=`<div class="row"><div class="l">${svg("CARGO")}<div><div class="nm" style="color:var(--pass)">${c.short} DELIVERS HERE</div>
+      <div class="ds">Collect it at ${coord(R.nodes[c.at])} and bring it back for ${c.fee}.</div></div></div><div class="at">&mdash;</div></div>`});
+
+  if(n.warp){
+    const nb=R.stage+1, band=nb>=4?"deep run":"short hop";
+    const why=!shipOK()?"DECK FAILS INSPECTION":R.fuel<R.warpCost?`NEED ${R.warpCost} FUEL`:null;
+    const owed=R.crew.length*R.wage;
+    const forf=R.cargo.filter(c=>c.taken&&!c.done);
+    h+=`<div class="row warp"><div class="l">${svg("WARP")}<div><div class="nm">JUMP TO STAGE ${nb}</div>
+      <div class="ds">${band}, ${Math.min(5,3+Math.floor(nb/2))} contracts. Costs ${R.warpCost} fuel and ${owed} in wages.${
+      forf.length?` <b class="warnt">${forf.map(c=>c.short).join(", ")} undelivered — ${forf.reduce((a,c)=>a+Math.round(c.fee/2),0)} penalty.</b>`:""}</div></div></div>
+      <button ${why?"disabled":'class="pri"'} id="warp">${why||"WARP OUT"}</button></div>`;
+  }
+
+  R.cargo.forEach((c,i)=>{
+    if(c.done||c.taken||c.at!==R.at)return;
+    const gate=c.need&&!R.specs.includes(c.need), noBay=!R.grid.includes(null);
+    const cost=[];
+    if(c.support)cost.push(`needs ${c.support==="SHD"?"shielding on every touching bay":c.support==="CRY"?"a cryo unit alongside":"life support alongside"}`);
+    if(c.crew)cost.push(`${R.specs.includes("VET")?1:2} tenders aboard`);
+    cost.push(`weighs ${KINDS[c.kind].weight}`);
+    h+=`<div class="row hot"><div class="l">${svg("CARGO")}<div><div class="nm">${c.short} &middot; ${c.name}</div>
+      <div class="ds">To ${coord(R.nodes[c.to])}, ${R.D[R.at][c.to]} fuel away. Pays <b class="gold">${c.fee}</b>. ${c.rule}
+      <b class="warnt">${cost.join(", ")}.</b></div></div></div>
+      <button ${gate||noBay?"disabled":'class="pri"'} data-take="${i}">${gate?"LOCKED":noBay?"NO BAY":"SIGN"}</button></div>`;
+  });
+
+  if(n.fuel){
+    const room=fuelCap()-R.fuel, afford=Math.floor(R.credits/n.fuel);
+    const heldTanks=R.hold.filter(k=>k==="TNK").length;
+    const note = room<=0
+      ? (heldTanks?`Tanks are full. The ${heldTanks} tank${heldTanks>1?"s":""} in your hold add nothing until stowed in a bay.`
+                 :`Tanks are full at ${fuelCap()}. Fit another tank to carry more.`)
+      : afford<=0 ? `You cannot afford a single unit at ${n.fuel}.`
+      : `${R.fuel} aboard, room for ${room} more.`;
+    h+=`<div class="row ${room<=0||afford<=0?"":""}"><div class="l">${svg("FUEL")}<div><div class="nm">FUEL &middot; ${n.fuel} each</div>
+      <div class="ds">${note}</div></div></div>
+      <div class="btns"><button id="f1" ${room<1||afford<1?"disabled":""}>+1</button>
+      <button id="f5" ${room<1||afford<1?"disabled":""}>+5</button>
+      <button id="fM" ${room<1||afford<1?"disabled":""}>FILL</button></div></div>`;
+  }
+  else h+=`<div class="row"><div class="l">${svg("FUEL")}<div><div class="nm">NO FUEL LINE</div>
+    <div class="ds">You leave on the ${R.fuel} you arrived with.</div></div></div><div class="at">&mdash;</div></div>`;
+
+  n.hires.forEach(id=>{const w=whyHire(id),hh=HIRES[id];
+    h+=`<div class="row ${w.need?"want":""}"><div class="l">${svg("CREW")}<div><div class="nm">${hh.name.toUpperCase()}${needTag(w)}</div>
+      <div class="ds">${w.s}</div></div></div><button data-hire="${id}" ${R.credits<hh.price?"disabled":""}>${hh.price}</button></div>`});
+  n.stock.forEach(k=>{const w=whyMod(k),mm=MOD[k];
+    h+=`<div class="row ${w.need?"want":""}"><div class="l">${svg(mm.icon)}<div><div class="nm">${mm.short}${needTag(w)}</div>
+      <div class="ds">${w.s}</div></div></div><button data-buy="${k}" ${R.credits<mm.price?"disabled":""}>${mm.price}</button></div>`});
+  [...new Set(R.hold.filter(k=>k[0]!=="@"))].forEach(k=>{
+    h+=`<div class="row"><div class="l">${svg(MOD[k].icon)}<div><div class="nm">${MOD[k].short}</div><div class="ds">in the hold</div></div></div>
+      <button data-sell="${k}" ${sellRate()?"":"disabled"}>${sellRate()?`PAWN ${sellValue(k)}`:"NO BUYER"}</button></div>`});
+  if(!n.port&&!n.fuel&&!n.warp&&!R.cargo.some(c=>!c.taken&&!c.done&&c.at===R.at))h+=`<div class="none">Bare rock.</div>`;
+  h+=`</div>`;
+
+  if(here().port)h+=`<div class="card" style="margin-top:8px"><div class="row"><div class="l">${svg("PORT")}<div>
+    <div class="nm">THIS YARD BUYS AT ${Math.round(sellRate()*100)}%</div>
+    <div class="ds">Tap any module on the deck to pawn it here. Rates differ port to port.</div></div></div><div class="at">&mdash;</div></div></div>`;
+  h+=`<h2 class="sec">CREW &middot; ${souls()} SOULS &middot; ${deckCrew()} WORKING THE DECK</h2><div class="card">`;
+  R.crew.forEach((id,i)=>{const locked=HIRES[id].spec&&R.cargo.some(c=>c.aboard&&c.need===HIRES[id].spec);
+    h+=`<div class="row"><div class="l">${svg("CREW")}<div><div class="nm">${HIRES[id].name.toUpperCase()}</div>
+      <div class="ds">${HIRES[id].deck?"runs 4 bays":"does not work the deck"} &middot; ${R.wage} wages${locked?" &middot; tied to cargo aboard":""}</div></div></div>
+      <button data-off="${i}" ${locked?"disabled":""}>PAY OFF</button></div>`});
+  h+=`</div>`;
+
+  const bad=res.checks.filter(c=>!c.ok);
+  h+=`<h2 class="sec">DECK &middot; ${bad.length?`<em class="warnt">${bad.length} PROBLEM${bad.length>1?"S":""}</em>`:'<em class="okt">CLEARS INSPECTION</em>'}
+    ${over?`<em class="warnt">&middot; OVERWEIGHT +${Math.ceil(over/2)} FUEL A LANE</em>`:""}</h2><div class="grid">`;
+  for(let i=0;i<TILES;i++){
+    const k=R.grid[i],mm=modOf(k),ht=res.heat[i];
+    const cls=["cell",k?"":"empty",k&&k[0]==="@"?"cargo":"",k==="RCT"?"rct":"",(k==="RAD"||k==="CRY")?"cold":"",k==="SHD"?"shd":"",
+      sel&&sel.t==="bay"&&sel.i===i?"sel":"",focus.includes(i)?"foc":"",k&&ht>5?"over":ht>=3?"warm":ht<0?"chill":""].filter(Boolean).join(" ");
+    h+=`<div class="${cls}" data-bay="${i}" tabindex="0"><span class="brt">${bayName(i)}</span><span class="ht">${ht>0?"+":""}${ht}</span>`+
+      (mm?`${svg(mm.icon)}<span class="code">${mm.short}</span>`:`<span class="tag">clear</span>`)+`</div>`;
+  }
+  h+=`</div>`;
+  if(R.hold.length){h+=`<div class="hold"><div class="hint">IN THE HOLD &mdash; tap one, then tap a clear bay</div><div class="chips">`;
+    R.hold.forEach((k,i)=>{const mm=modOf(k);
+      h+=`<button class="chip ${k[0]==="@"?"cargo":""} ${sel&&sel.t==="hold"&&sel.n===i?"sel":""}" data-hold="${i}">${svg(mm.icon)}${mm.short}</button>`});
+    h+=`</div></div>`}
+  if(sel){const k=sel.t==="bay"?R.grid[sel.i]:R.hold[sel.n],mm=modOf(k);
+    if(mm){
+      const cargo=!!mm.cargo, rate=sellRate();
+      h+=`<div class="card"><div class="row"><div class="l">${svg(mm.icon)}<div><div class="nm">${mm.name.toUpperCase()}</div>
+        <div class="ds">${cargo?mm.cargo.rule:mm.blurb}${!cargo?` Paid ${MOD[k].price} new.`:""}</div></div></div>
+        <div class="btns">${cargo?"":`<button ${rate?"":"disabled"} data-pawn="${k}" data-from="${sel.t}" data-idx="${sel.t==="bay"?sel.i:sel.n}">${rate?`PAWN ${sellValue(k)}`:"NO BUYER"}</button>`}
+        <button class="warn" data-jet="${k}">${cargo?"SET DOWN":"DUMP"}</button></div></div></div>`;
+    }}
+  h+=`<div class="checks">`+(bad.length
+    ? bad.map(c=>`<div class="chk no tap" data-chk="${res.checks.indexOf(c)}"><div class="mk">✕</div><div>
+        <div class="lb">${c.lb}<span class="pin">SHOW</span></div><div class="dt">${c.dt}</div></div></div>`).join("")
+      +`<div class="chk ok"><div class="mk">✓</div><div><div class="lb">${res.checks.length-bad.length} OTHERS CLEAR</div></div></div>`
+    : `<div class="chk ok"><div class="mk">✓</div><div><div class="lb">ALL ${res.checks.length} CLEAR</div><div class="dt">Cleared to burn.</div></div></div>`)+`</div>`;
+
+  h+=`<h2 class="sec">LANES OUT OF ${coord(n)}</h2>`;
+  outEdges().forEach(e=>{
+    const d=R.nodes[e.b],cost=e.cost+surcharge();
+    const why=!res.ok?"DECK FAILS INSPECTION":R.fuel<cost?`NEED ${cost} FUEL`:null;
+    const flags=[];
+    R.cargo.forEach(c=>{if(!c.taken&&!c.done&&c.at===d.id)flags.push(`<b class="hotb">${c.short} on offer</b>`);
+      if(c.aboard&&c.to===d.id)flags.push(`<b class="okb">drop ${c.short} for ${c.fee}</b>`);
+      if(!c.done&&!c.aboard&&c.to===d.id)flags.push(`<b class="ltb">${c.short} delivers there</b>`)});
+    if(d.warp)flags.push(`<b class="warpb">warp point</b>`);
+    if(d.port)flags.push(`yard, ${d.stock.length} lines`);
+    if(d.hires.length)flags.push("hiring hall");
+    if(d.fuel)flags.push("fuel line");
+    if(!flags.length)flags.push("bare rock");
+    let rows="",wanted=0;
+    d.hires.forEach(id=>{const w=whyHire(id);if(w.need)wanted++;
+      rows+=`<div class="pr ${w.need?"want":""}"><div class="l">${svg("CREW")}<div><div class="nm">${HIRES[id].name.toUpperCase()}${needTag(w)}</div><div class="ds">${w.s}</div></div></div></div>`});
+    d.stock.forEach(k=>{const w=whyMod(k);if(w.need)wanted++;
+      rows+=`<div class="pr ${w.need?"want":""}"><div class="l">${svg(MOD[k].icon)}<div><div class="nm">${MOD[k].short}${needTag(w)}</div><div class="ds">${w.s}</div></div></div></div>`});
+    h+=`<div class="lane"><div class="lh"><span class="lc">${coord(d)}</span><span class="lf">${cost} fuel${surcharge()?` (${e.cost}+${surcharge()} weight)`:""}</span></div>
+      <div class="lb2">${flags.join(" &middot; ")}${wanted?` <b class="wantb">&middot; ${wanted} you need</b>`:""}</div>
+      ${rows?`<details class="peek"><summary>WHAT THEY HAVE</summary><div class="pk">${rows}<div class="pnote">Prices are anyone's guess until you dock.</div></div></details>`:""}
+      <button class="wide ${why?"":"pri"}" data-burn="${e.b}" ${why?"disabled":""}>${why||`BURN ${cost} AND GO`}</button></div>`;
+  });
+
+  h+=`<h2 class="sec">CONTRACTS &middot; ${R.cargo.filter(c=>c.done).length} OF ${R.cargo.length} DELIVERED</h2><div class="card">`;
+  R.cargo.forEach(c=>{
+    const st=c.done?"PAID":c.aboard?`ABOARD &rarr; ${coord(R.nodes[c.to])}`:c.taken?"SET DOWN":`${coord(R.nodes[c.at])} &rarr; ${coord(R.nodes[c.to])}`;
+    h+=`<div class="row ${c.done?"got":""}"><div class="l">${svg("CARGO")}<div><div class="nm">${c.short} &middot; ${c.name}</div>
+      <div class="ds">${c.rule} Pays ${c.fee}.</div></div></div><div class="at">${st}</div></div>`});
+  h+=`</div>`;
+  h+=`<details class="ref" open><summary>SECTOR CHART &middot; PLAN ${R.seed}</summary><div class="mapbox">${chart()}</div>
+    <div class="legend"><span class="lg pt">+A work on offer</span><span class="lg en">&rarr;A drop, aboard now</span>
+    <span class="lg lt">&rarr;A drop, not yet taken</span><span class="lg wp">WARP jump out</span></div></details>`;
+  if(stuck())h+=`<div class="card" style="border-color:var(--fail);margin-top:12px"><div class="row">
+    <div class="l"><div><div class="nm" style="color:var(--fail)">NOTHING LEFT TO BURN</div>
+    <div class="ds">No lane you can afford, no fuel for sale, nothing to sell.</div></div></div>
+    <button class="warn" id="bust">CALL IT</button></div></div>`;
+  if(R.log.length)h+=`<div class="log">${R.log.slice(0,4).map(l=>"· "+l).join("<br>")}</div>`;
+  el("view").innerHTML=h; wire(res);
+}
+
+function chart(){
+  const RW=58,colW=88,padX=22,wide=W*colW;
+  const pos=n=>({x:padX+(n.n===1?wide/2:(n.c+.5)*(wide/n.n)),y:28+n.r*RW});
+  const open=outEdges().map(e=>e.b);
+  let s=`<svg class="map" viewBox="0 0 ${wide+padX*2} ${28+(R.rows.length-1)*RW+28}">`;
+  R.edges.forEach(e=>{const a=pos(R.nodes[e.a]),b=pos(R.nodes[e.b]);
+    const seen=R.visited.includes(e.a)&&R.visited.includes(e.b);
+    s+=`<line class="ln ${e.a===R.at||e.b===R.at?"open":seen?"done":""}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`});
+  R.nodes.forEach(n=>{const p=pos(n),me=n.id===R.at;
+    const off=R.cargo.filter(c=>!c.taken&&!c.done&&c.at===n.id);        // work on offer here
+    const carry=R.cargo.filter(c=>c.aboard&&c.to===n.id);               // drop for cargo aboard
+    const later=R.cargo.filter(c=>!c.done&&!c.aboard&&c.to===n.id);     // drop for work not yet taken
+    if(n.warp)s+=`<circle class="nd warpring" cx="${p.x}" cy="${p.y}" r="15"/>`;
+    if(carry.length||later.length)s+=`<circle class="nd drop ${carry.length?"live":""}" cx="${p.x}" cy="${p.y}" r="13"/>`;
+    s+=`<circle class="nd ${me?"here":""} ${open.includes(n.id)?"open":""} ${R.visited.includes(n.id)?"done":""} ${off.length?"part":""}" cx="${p.x}" cy="${p.y}" r="10"/>`;
+    s+=`<text class="co" x="${p.x}" y="${p.y-14}" text-anchor="middle">${coord(n)}</text>`;
+    const marks=[];
+    if(off.length) marks.push(`<tspan class="pt">+${off.map(c=>c.short.slice(-1)).join("")}</tspan>`);
+    if(carry.length) marks.push(`<tspan class="en">\u2192${carry.map(c=>c.short.slice(-1)).join("")}</tspan>`);
+    if(later.length) marks.push(`<tspan class="lt">\u2192${later.map(c=>c.short.slice(-1)).join("")}</tspan>`);
+    if(marks.length) s+=`<text x="${p.x}" y="${p.y+19}" text-anchor="middle">${marks.join(" ")}</text>`;
+    const kind=n.warp?"WARP":n.port?"PORT":n.fuel?"fuel":"";
+    if(kind) s+=`<text class="${n.warp?"wp":""}" x="${p.x}" y="${p.y+(marks.length?28:19)}" text-anchor="middle">${kind}</text>`;
+  });
+  return s+`</svg>`;
+}
+
+function wire(res){
+  const b=(sel,fn)=>document.querySelectorAll(sel).forEach(x=>x.onclick=()=>fn(x));
+  b("[data-take]",x=>accept(+x.dataset.take));
+  b("[data-buy]",x=>buyMod(x.dataset.buy));
+  b("[data-sell]",x=>sellMod(x.dataset.sell,"hold"));
+  b("[data-pawn]",x=>sellMod(x.dataset.pawn,x.dataset.from,+x.dataset.idx));
+  b("[data-hire]",x=>hire(x.dataset.hire));
+  b("[data-off]",x=>payOff(+x.dataset.off));
+  b("[data-burn]",x=>{const e=outEdges().find(y=>y.b===+x.dataset.burn);if(e)jump(e)});
+  b("[data-jet]",x=>jettison(x.dataset.jet));
+  b("[data-hold]",x=>{const n=+x.dataset.hold;sel=(sel&&sel.t==="hold"&&sel.n===n)?null:{t:"hold",n};render()});
+  const f1=el("f1"),f5=el("f5"),fM=el("fM");
+  if(f1)f1.onclick=()=>buyFuel(1);
+  if(f5)f5.onclick=()=>buyFuel(5);
+  if(fM)fM.onclick=()=>buyFuel(999);
+  const w=el("warp"); if(w)w.onclick=doWarp;
+  const bs=el("bust"); if(bs)bs.onclick=()=>{R.over="bust";R.overWhy="Stranded with nothing left to sell";R.summary=null;save();render()};
+  document.querySelectorAll("[data-bay]").forEach(d=>{const i=+d.dataset.bay;
+    d.onclick=()=>tapBay(i); d.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();tapBay(i)}}});
+  document.querySelectorAll("[data-chk]").forEach(d=>{const c=res.checks[+d.dataset.chk],live=c.focus.filter(i=>i>=0);
+    if(!live.length)return;
+    d.onclick=()=>{const on=focus.length===live.length&&live.every(i=>focus.includes(i));focus=on?[]:live;render();
+      document.querySelector(".grid").scrollIntoView({behavior:"smooth",block:"center"})}});
+}
+function tapBay(i){
+  const g=R.grid;
+  if(!sel){if(g[i])sel={t:"bay",i};render();return}
+  if(sel.t==="hold"){if(g[i])return;g[i]=R.hold.splice(sel.n,1)[0];sel=null}
+  else{if(sel.i===i){sel=null;render();return}const t=g[sel.i];g[sel.i]=g[i];g[i]=t;sel=null}
+  focus=[];save();render();
+}
+
+function renderHull(){
+  el("gauges").innerHTML="";
+  el("orders").className="orders do";
+  el("orders").innerHTML=`<div class="ot">Pick a hull.</div><div class="os">You keep it between stages. It decides what work you can take.</div>`;
+  el("view").innerHTML=HULLS.map((hl,i)=>`<div class="lane"><div class="lh"><span class="lc">${hl.name}</span>
+    <span class="lf">${hl.base} base capacity</span></div>
+    <div class="lb2">${hl.blurb}</div>
+    <div class="lb2" style="color:var(--dim)">${hl.mods.map(k=>MOD[k].short.toLowerCase()).join(", ")} &middot; ${hl.crew.length} crew</div>
+    <button class="wide pri" data-hull="${i}">TAKE THIS ONE</button></div>`).join("");
+  document.querySelectorAll("[data-hull]").forEach(x=>x.onclick=()=>{
+    R={hull:HULLS[+x.dataset.hull]};
+    const hl=R.hull;
+    genStage(makeSeed(),1,null);
+    R.credits=Math.round(320*hl.credits); R.opening=R.credits;
+    view="run"; sel=null; focus=[]; save(); render();
+  });
+}
+function renderEnd(){
+  const s=R.summary, clear=R.over==="clear";
+  el("orders").className="orders "+(clear?"go":"bad");
+  el("orders").innerHTML=`<div class="ot">${clear?`Stage ${R.stage} cleared.`:"The run is over."}</div>`;
+  let h="";
+  if(s){
+    const p=s.profit;
+    h+=`<div class="stamp ${p>=0?"":"bad"}"><h3>${p>=0?"PROFIT "+p:"LOSS "+Math.abs(p)}</h3>
+      <div class="pl">
+        <div><dt>OPENED WITH</dt><dd>${s.opening}</dd></div>
+        <div><dt>REVENUE</dt><dd class="up">+${s.revenue}</dd></div>
+        <div><dt>SPENT ON SHIP &amp; FUEL</dt><dd class="dn">−${s.spend-s.wages-s.penalty}</dd></div>
+        <div><dt>WAGES</dt><dd class="dn">−${s.wages}</dd></div>
+        ${s.penalty?`<div><dt>FORFEITS</dt><dd class="dn">−${s.penalty}</dd></div>`:""}
+        <div><dt>CLOSED WITH</dt><dd>${R.credits}</dd></div>
+      </div>
+      <div class="sub">BEST POSSIBLE HERE WAS ${s.best} &middot; ${R.cleared} STAGE${R.cleared===1?"":"S"} CLEARED</div></div>`;
+  } else {
+    h+=`<div class="stamp bad"><h3>BUST</h3><p>${R.overWhy}.</p>
+      <div class="sub">${R.cleared} STAGE${R.cleared===1?"":"S"} CLEARED &middot; ${R.credits} CREDITS LEFT</div></div>`;
+  }
+  h+= clear
+    ? `<button class="wide pri" id="on" style="margin-top:12px">PRESS ON TO STAGE ${R.stage+1}</button>
+       <button class="wide" id="retire" style="margin-top:8px">RETIRE ON ${R.credits}</button>`
+    : `<button class="wide pri" id="again" style="margin-top:12px">NEW HAULER</button>`;
+  el("view").innerHTML=h;
+  const on=el("on");if(on)on.onclick=()=>{
+    const carry={grid:R.grid,crew:R.crew,specs:R.specs,fuel:R.fuel,credits:R.credits,cleared:R.cleared,hull:R.hull};
+    genStage(makeSeed(),R.stage+1,carry); sel=null;focus=[];save();render()};
+  const rt=el("retire");if(rt)rt.onclick=()=>{R.over="bust";R.overWhy=`You retired on ${R.credits} after ${R.cleared} stages`;R.summary=null;render()};
+  const ag=el("again");if(ag)ag.onclick=()=>{view="hull";R=null;try{localStorage.removeItem("stowage:v31")}catch(e){}render()};
+}
+
+/* ---- boot ---- */
+(function(){
+  let saved=null;
+  try{const s=localStorage.getItem("stowage:v31"); if(s)saved=JSON.parse(s)}catch(e){}
+  if(saved&&saved.nodes&&saved.grid&&saved.hull){
+    R=saved; buildAdj(); R.D=R.nodes.map((_,i)=>dijkstra(i)); view="run";
+  } else view="hull";
+  render();
+})();
+</script></body></html>
