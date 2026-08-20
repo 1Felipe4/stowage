@@ -5,8 +5,7 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  # Render service URL — adjust if Render assigns a different slug
-  VITE_SERVER_URL = "https://stowage-server.onrender.com"
+  VITE_SERVER_URL = "https://stowage-iua0.onrender.com"
 
 [[redirects]]
   from = "/*"

@@ -38,7 +38,9 @@ can land later without re-architecting.
 
 - Frontend: Netlify auto-deploy from `main` (`netlify.toml`, base=`web`, publish=`dist`).
   `VITE_SERVER_URL` is set in `netlify.toml`.
-- Server: Render blueprint in `render.yaml` (`stowage-server`, health check `/health`).
+- Server: Render web service `stowage` (created via dashboard, not the blueprint),
+  live at https://stowage-iua0.onrender.com, rootDir `server`, health check `/health`,
+  auto-deploys on push to `main`. `render.yaml` documents the same shape but is unlinked.
   Note: save files live on the service disk (`server/data/`), which is ephemeral on
   Render free tier — restarts wipe server saves; clients re-sync from their offline
   cache on next play. Add a Render disk or a real DB before multiplayer.
