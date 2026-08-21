@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   accept, askJump, buyFuel, buyMod, callIt, cancelJump, confirmJump, coord, doWarp, dropCourse, here, hire, jettison,
-  outEdges, payOff, plotCourse, runOrder, scuttle, sellMod, sellRate, sellValue, shipOK, stuckReason, tapBay, tapHold,
-  toggleFocus
+  outEdges, payOff, plotCourse, runOrder, scuttle, sellMod, sellRate, sellValue, shipOK, shipPrice, stuckReason, tapBay,
+  tapHold, toggleFocus, tradeIn, buyShip
 } from '../engine/actions'
-import { coverage, evaluate, fuelCap, massOf, modOf, souls, surcharge } from '../engine/core'
+import { blocked, coverage, evaluate, fuelCap, laneCost, laneFuel as laneFuelOf, massOf, modOf, souls, surcharge } from '../engine/core'
 import { courseInfo } from '../engine/course'
-import { HIRES, KINDS, MOD, TILES, bayName } from '../engine/data'
+import { HIRES, HULLS, KINDS, MOD, TILES, bayName } from '../engine/data'
 import { orders, whyHire, whyMod, type Why } from '../engine/guidance'
 import { R, emit, ui, type PortTab, type Tab } from '../engine/state'
 import { TUT } from '../engine/teach'
@@ -21,6 +21,18 @@ function setTab(t: Tab) {
 function setPortTab(t: PortTab) {
   ui.portTab = t
   emit()
+}
+
+/** The hull's silhouette, drawn from its blocked cells. */
+function ShipShape({ hull }: { hull: (typeof HULLS)[number] }) {
+  const gone = new Set(hull.blocked)
+  return (
+    <div className="shape" aria-hidden>
+      {Array.from({ length: TILES }, (_, i) => (
+        <i className={gone.has(i) ? 'off' : ''} key={i} />
+      ))}
+    </div>
+  )
 }
 
 function NeedTag({ w }: { w: Why }) {
@@ -245,14 +257,15 @@ export function RunView() {
   }
 
   /* Attention per port sub-tab, so the tab bar can say which one to open. */
-  const attention = {
+  const attention: Record<PortTab, number> = {
     market:
       needStock.length +
       (n.fuel && R.credits >= n.fuel && fuelCap() > R.fuel && R.fuel <= 4 ? 1 : 0),
     crew: n.hires.filter((id) => whyHire(id).need > 0).length,
     contracts: R.cargo.filter(
       (c) => (!c.taken && !c.done && c.at === R.at && R.grid.includes(null)) || (!c.done && c.to === R.at && !c.aboard)
-    ).length
+    ).length,
+    ships: n.ships.filter((id) => id !== R.hull.id && R.credits >= shipPrice(id)).length
   }
 
   const sortedChecks = res.checks.slice().sort((a, b) => (a.ok === b.ok ? 0 : a.ok ? 1 : -1))
@@ -390,9 +403,9 @@ export function RunView() {
         {/* ---------------- PORT ---------------- */}
         <section className={'pane pane-port' + (ui.tab === 'port' ? ' on' : '') + (tutStep?.tab === 'port' ? ' lit' : '')}>
           <div className="seg">
-            {(['market', 'crew', 'contracts'] as PortTab[]).map((t) => (
+            {(['market', 'crew', 'contracts', ...(n.ships.length ? (['ships'] as PortTab[]) : [])] as PortTab[]).map((t) => (
               <button className={ui.portTab === t ? 'on' : ''} key={t} onClick={() => setPortTab(t)}>
-                {t === 'market' ? 'Market' : t === 'crew' ? 'Crew' : 'Contracts'}
+                {t === 'market' ? 'Market' : t === 'crew' ? 'Crew' : t === 'contracts' ? 'Contracts' : 'Ships'}
                 {attention[t] > 0 && <i className="segdot" />}
               </button>
             ))}
@@ -513,6 +526,55 @@ export function RunView() {
             </div>
           )}
 
+          {ui.portTab === 'ships' && (
+            <div className="port-body">
+              <div className="statrow">
+                <div className="stat">
+                  <div className="sl">YOUR HULL</div>
+                  <div className="sv" style={{ fontSize: 15 }}>{R.hull.name}</div>
+                </div>
+                <div className="stat">
+                  <div className="sl">TRADE-IN HERE</div>
+                  <div className="sv amber">{tradeIn()}</div>
+                </div>
+              </div>
+              {n.ships.map((id) => {
+                const h = HULLS.find((x) => x.id === id)
+                if (!h) return null
+                const net = shipPrice(id)
+                const mine = h.id === R.hull.id
+                return (
+                  <div className="shipcard" key={id}>
+                    <div className="sh">
+                      <ShipShape hull={h} />
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div className="snm">{h.name}</div>
+                        <div className="sspec">
+                          {20 - h.blocked.length} bays · base {h.base} · heat cap {h.heatCap} · fuel ×{h.fuelMult}
+                        </div>
+                        <div className="sblurb">{h.blurb}</div>
+                      </div>
+                    </div>
+                    <ConfirmBuy
+                      price={net}
+                      want={!mine && R.credits >= net}
+                      disabled={R.credits < net}
+                      blocked={mine ? 'YOURS' : undefined}
+                      onBuy={() => buyShip(id)}
+                    />
+                  </div>
+                )
+              })}
+              <div className="dashcard">
+                <Icon k="TAGI" />
+                <div>
+                  Trading up moves every module into the hold — the new deck is a different shape, so you re-stow her before
+                  you burn.
+                </div>
+              </div>
+            </div>
+          )}
+
           {ui.portTab === 'contracts' && (
             <div className="port-body">
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -612,7 +674,8 @@ export function RunView() {
                 const k = R.grid[i],
                   mm = modOf(k),
                   ht = res.heat[i]
-                const over = !!k && ht > 5
+                if (blocked(i)) return <div className="cell gone" key={i} aria-hidden />
+                const over = !!k && ht > R.hull.heatCap
                 const idle = !!k && cov.active[i] === false
                 const cls = [
                   'cell',
@@ -820,14 +883,14 @@ export function RunView() {
                   .map((e) => {
                   const d = R.nodes[e.b]
                   const isNext = course?.nextHop === e.b
-                  const cost = e.cost + sur
+                  const cost = laneCost(e.cost)
                   const why = !res.ok ? 'DECK FAILS INSPECTION' : R.fuel < cost ? `NEED ${cost} FUEL` : null
                   const what: string[] = []
                   if (d.port) what.push(`Yard, ${d.stock.length} lines`)
                   if (d.hires.length) what.push('hiring hall')
                   if (d.fuel) what.push('fuel line')
                   if (!what.length) what.push('Bare rock')
-                  if (sur) what.push(`${e.cost}+${sur} weight`)
+                  if (sur) what.push(`${laneFuelOf(e.cost)}+${sur} weight`)
                   const flags: { txt: string; cls: string }[] = []
                   R.cargo.forEach((c) => {
                     if (!c.taken && !c.done && c.at === d.id) flags.push({ txt: `${c.short} on offer`, cls: 'amber' })

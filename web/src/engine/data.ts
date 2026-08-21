@@ -58,7 +58,7 @@ export const MOD: Record<ModCode, ModDef> = {
   SHD: {
     code: 'SHD', icon: 'SHD', name: 'Shielding', short: 'SHIELD', tok: ['blocks heat'],
     power: 0, heat: 0, price: 19,
-    blurb: 'Contains volatile cargo, and stops reactor heat spilling through it. Inert otherwise.'
+    blurb: 'Contains volatile cargo, and boxes in a hot neighbour: every shielded face cuts what that reactor or engine pushes into its other bays by 1. Costs no power — only a bay.'
   },
   TNK: {
     code: 'TNK', icon: 'TNK', name: 'Fuel tank', short: 'FUEL TANK', tok: ['holds 6'],
@@ -105,25 +105,62 @@ export const HIRES: Record<HireId, HireDef> = {
   }
 }
 
+/* Hulls differ by silhouette and by trait. The 20-cell grid never changes
+   shape; each hull simply blocks the cells it does not have, which is what
+   makes buying a ship a puzzle to re-solve rather than a stat bump.
+
+     0  1  2  3
+     4  5  6  7
+     8  9 10 11
+    12 13 14 15
+    16 17 18 19                                                            */
 export const HULLS: Hull[] = [
   {
-    id: 'freighter', name: 'Standard freighter', base: 4, credits: 1.0, crew: ['HAND', 'HAND'],
+    id: 'skiff', name: 'Yard skiff', tier: 0, price: 0,
+    base: 4, heatCap: 5, fuelMult: 1.0,
+    blocked: [14, 15, 16, 17, 18, 19], // 14 bays: a full block with a stub tail
+    credits: 1.0, crew: ['HAND', 'HAND'],
     mods: ['RCT', 'THR', 'THR', 'LSP', 'BRT', 'TNK', 'TNK'],
-    blurb: 'Balanced and forgiving. Two engines, two tanks, room to grow.'
+    blurb: 'Fourteen bays and nothing spare. Every run starts here — trade up the moment you can afford to.'
   },
   {
-    id: 'hauler', name: 'Long-hauler', base: 6, credits: 1.0, crew: ['HAND', 'HAND'],
-    mods: ['RCT', 'THR', 'LSP', 'BRT', 'TNK', 'TNK', 'TNK'],
-    blurb: 'Enormous range on three tanks — but one engine, so it is illegal until you buy a second.'
+    id: 'tug', name: 'Tug', tier: 1, price: 700,
+    base: 3, heatCap: 6, fuelMult: 1.15,
+    blocked: [3, 7, 11, 15, 19], // 15 bays, three across and tall
+    credits: 1.0, crew: ['HAND', 'HAND'],
+    mods: ['RCT', 'THR', 'THR', 'THR', 'LSP', 'BRT', 'TNK'],
+    blurb: 'Narrow, insulated, and thirsty. Tolerates a bay at +6, which is worth more than it sounds.'
   },
   {
-    id: 'tug', name: 'Tug', base: 2, credits: 1.0, crew: ['HAND', 'HAND'],
-    mods: ['RCT', 'RCT', 'THR', 'THR', 'THR', 'LSP', 'BRT'],
-    blurb: 'Three engines and power to spare. No tanks at all, so you refuel constantly.'
+    id: 'freighter', name: 'Standard freighter', tier: 1, price: 1100,
+    base: 5, heatCap: 5, fuelMult: 1.0,
+    blocked: [16, 17, 18, 19], // 16 bays, a clean 4x4
+    credits: 1.0, crew: ['HAND', 'HAND'],
+    mods: ['RCT', 'THR', 'THR', 'LSP', 'BRT', 'TNK', 'TNK'],
+    blurb: 'Sixteen square bays and no surprises. The honest step up from a skiff.'
   },
   {
-    id: 'liner', name: 'Liner', base: 4, credits: 0.8, crew: ['HAND', 'HAND', 'HAND', 'VET'],
-    mods: ['RCT', 'THR', 'THR', 'LSP', 'LSP', 'BRT', 'BRT', 'TNK'],
-    blurb: 'Crewed and bunked from the start, with a vet aboard. Half your bays are gone before you load anything.'
+    id: 'hauler', name: 'Long-hauler', tier: 2, price: 2200,
+    base: 7, heatCap: 5, fuelMult: 0.85,
+    blocked: [0, 3], // 18 bays, bow corners clipped
+    credits: 1.0, crew: ['HAND', 'HAND'],
+    mods: ['RCT', 'THR', 'THR', 'LSP', 'BRT', 'TNK', 'TNK', 'TNK'],
+    blurb: 'Eighteen bays and the leanest burn in the sector — every lane costs less on this hull.'
+  },
+  {
+    id: 'whale', name: 'Ore whale', tier: 3, price: 4000,
+    base: 10, heatCap: 6, fuelMult: 1.2,
+    blocked: [], // all twenty
+    credits: 1.0, crew: ['HAND', 'HAND'],
+    mods: ['RCT', 'RCT', 'THR', 'THR', 'LSP', 'LSP', 'BRT', 'BRT', 'TNK', 'TNK'],
+    blurb: 'All twenty bays, ten base capacity, and a heat cap of 6. Drinks fuel like it is owed some.'
   }
 ]
+
+/** Every run begins here. */
+export const STARTER: Hull = HULLS[0]
+
+/** Which hulls a dealer may stock this deep in. */
+export function tierFor(stage: number): number {
+  return stage >= 5 ? 3 : stage >= 3 ? 2 : 1
+}

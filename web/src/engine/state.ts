@@ -12,7 +12,7 @@ export function setR(v: GameState | null) {
 export type Sel = { t: 'bay'; i: number } | { t: 'hold'; n: number }
 
 export type Tab = 'port' | 'deck' | 'lanes' | 'chart'
-export type PortTab = 'market' | 'crew' | 'contracts'
+export type PortTab = 'market' | 'crew' | 'contracts' | 'ships'
 
 /** A plotted burn awaiting confirmation. Nothing moves until confirmed. */
 export interface JumpPlan {

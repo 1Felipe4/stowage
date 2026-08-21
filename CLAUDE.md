@@ -40,6 +40,12 @@ can land later without re-architecting.
 - `npx tsx web/test/heat.ts` — heat geometry, ambient scaling, feasibility at depth.
 - `npx tsx web/test/flavour.ts` — cargo goods/clients: kind-matched, unique per
   board, deterministic per seed, and never load-bearing for rules.
+- `npx tsx web/test/ships.ts` — silhouettes, traits, dealer placement/tiers, and
+  trading up (net price, modules to hold, refusals).
+
+The pilot starts every run on the starter, like real play, and reports per-stage
+clear rates. The healthy shape is a forgiving stage 1 (~83%) falling off from
+stage 3 as ambient heat arrives (~40-60%) — judge that curve, not just the total.
 - `npx tsx web/test/screens.ts` — lesson/tutorial content, tutorial predicates
   against real state, and run-end scoring. All run headless (no DOM needed).
 
@@ -67,6 +73,36 @@ can land later without re-architecting.
   which stores a `JumpPlan` (with `why` when blocked); only `confirmJump()` moves
   the ship, and it routes through `jump()` so fuel and inspection are re-guarded.
 
+## Ships
+
+Hulls differ by silhouette and by trait, which is what makes a dealer worth
+visiting. The grid is always 20 cells; `hull.blocked` lists the cells a hull does
+not have, so each ship is a different shape to solve:
+
+| hull | bays | base | heat cap | fuel | price |
+|---|---|---|---|---|---|
+| Yard skiff (starter) | 14 | 4 | 5 | x1.00 | free |
+| Tug | 15 | 3 | 6 | x1.15 | 700 |
+| Standard freighter | 16 | 5 | 5 | x1.00 | 1100 |
+| Long-hauler | 18 | 7 | 5 | x0.85 | 2200 |
+| Ore whale | 20 | 10 | 6 | x1.20 | 4000 |
+
+- **Every run starts on the skiff.** There is no hull picker; you buy your way up.
+  `hull.mods`/`hull.crew` are therefore only ever read for the starter — a bought
+  hull arrives bare and your modules land in the hold to re-stow. Keep every
+  hull's `mods` sane anyway so it is not a trap if that ever changes.
+- Shipyards: every warp point deals, plus ~1 port in 4. `tierFor(stage)` caps
+  what they stock, so early sectors sell small. `shipPrice()` nets off `tradeIn()`,
+  which is your current hull's price at the local buy-back rate.
+- Traits are centralised: **all** lane-fuel maths goes through `laneFuel()`/
+  `laneCost()` in core.ts, and the heat cap is `R.hull.heatCap`. Never inline a
+  lane cost — the multiplier will be forgotten in one place and not another.
+- `solveStage()` rejects any plan whose `planCost().bays` exceeds `bays()`, so a
+  small hull is offered smaller runs instead of impossible ones. Without this the
+  generator promised plans a 14-bay deck could not physically hold.
+- Saves re-resolve `hull` by id from `HULLS` on load, so balance changes reach
+  old saves instead of a frozen copy travelling forward.
+
 ## Contract flavour
 
 `engine/flavour.ts` holds goods names per cargo kind and a list of consignors.
@@ -89,6 +125,11 @@ ever seen was 4 against a cap of 5, and no arrangement could break it. Now:
 - Two guards keep it from soft-locking: `RAD` is forced into the first port's
   stock whenever ambient > 0, and a fresh start at depth gets a radiator per
   reactor in its kit (a bare reactor reads 3 + ambient and cannot be arranged out).
+- Shielding manages heat **at the source** while cooling pulls it out of a bay:
+  each shielded face cuts what that reactor/engine pushes into its other
+  neighbours by 1 (`effectiveSpill`), for no power. A shielded bay also takes no
+  spill itself. It never protects bays *beyond* it — spill only ever travels one
+  cell, so there is no shadowing.
 - `whyMod('RAD'/'CRY')` reports cooling as NEEDED when any bay is over the line,
   or sitting on it with more ambient still to come — this is what makes the
   market flag it, and what lets the scripted pilot survive depth.

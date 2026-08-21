@@ -4,6 +4,7 @@
 import { genStage } from '../src/engine/gen'
 import { R, setR } from '../src/engine/state'
 import { HULLS, KINDS, MOD, TILES } from '../src/engine/data'
+const HULL = (id: string) => HULLS.find((h) => h.id === id)!
 import { capacity, evaluate, fits, fuelCap, massOf, surcharge } from '../src/engine/core'
 import {
   accept, buyFuel, buyMod, callIt, doWarp, here, hire, jettison, jump, outEdges,

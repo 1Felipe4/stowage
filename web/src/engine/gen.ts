@@ -1,4 +1,4 @@
-import { HIRES, KINDS, MOD, TILES } from './data'
+import { HIRES, HULLS, KINDS, MOD, TILES, tierFor } from './data'
 import { fits, fuelCap } from './core'
 import { buildAdj, dijkstra } from './map'
 import { mulberry32, seedNum } from './rng'
@@ -33,7 +33,7 @@ export function genStage(seed: string, stage: number, carry: Carry | null, start
       const c = r === 0 ? 1 : 2 + Math.floor(rng() * 2),
         row: NodeT[] = []
       for (let i = 0; i < c; i++) {
-        nodes.push({ id: id++, r, c: i, n: c, fuel: 0, port: false, warp: false, stock: [], hires: [] })
+        nodes.push({ id: id++, r, c: i, n: c, fuel: 0, port: false, warp: false, stock: [], hires: [], ships: [] })
         row.push(nodes[nodes.length - 1])
       }
       rows.push(row)
@@ -174,6 +174,18 @@ export function genStage(seed: string, stage: number, carry: Carry | null, start
       }
     })
 
+    // shipyards. Warp points always deal — you pass through them to leave the
+    // sector — plus roughly one port in four, so a hull is findable but not
+    // everywhere. Stock is capped by depth so early sectors sell small.
+    const maxTier = tierFor(stage)
+    const forSale = HULLS.filter((h) => h.tier > 0 && h.tier <= maxTier)
+    R.nodes.forEach((nd) => {
+      const deals = nd.warp || (nd.port && rng() < 0.25)
+      if (!deals || !forSale.length) return
+      const shuffled = forSale.slice().sort(() => rng() - 0.5)
+      nd.ships = shuffled.slice(0, 1 + Math.floor(rng() * 2)).map((h) => h.id)
+    })
+
     // freight pricing, then the repair loop
     const priceAll = () =>
       R.cargo.forEach((c) => {
@@ -190,9 +202,20 @@ export function genStage(seed: string, stage: number, carry: Carry | null, start
     }
     if (best.profit < floorProfit() && !lastResort) continue
 
-    // and prove the winning subset can actually be arranged on the deck
+    // and prove the winning subset can actually be arranged on the deck,
+    // counting the support modules the plan obliges you to buy
     const bag = R.grid.filter(Boolean).slice() as string[]
     best.set.forEach((i) => bag.push('@' + i))
+    const have = (k: ModCode) => bag.filter((x) => x === k).length
+    let needShd = 0
+    let needCry = 0
+    best.set.forEach((i) => {
+      const c = R.cargo[i]
+      if (c.kind === 'volatile') needShd += Math.max(0, 2 - (R.specs.includes('HAZMAT') ? 1 : 0))
+      if (c.kind === 'cold') needCry = Math.max(needCry, 1)
+    })
+    for (let i = have('SHD'); i < needShd; i++) bag.push('SHD')
+    for (let i = have('CRY'); i < needCry; i++) bag.push('CRY')
     R.cargo.forEach((c) => (c.aboard = false))
     best.set.forEach((i) => {
       R.cargo[i].aboard = true

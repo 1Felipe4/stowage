@@ -6,11 +6,11 @@ import { R, emit, getVersion, setR, subscribe, ui } from '../engine/state'
 import type { GameState } from '../engine/types'
 import { loadSave } from '../net/saves'
 import { EndView } from './EndView'
-import { HullPick } from './HullPick'
 import { Icon } from './Icon'
 import { RunView } from './RunView'
 import { LessonsScreen, MenuScreen, ScoresScreen } from './Screens'
 import { loadScores } from '../net/scores'
+import { HULLS, STARTER } from '../engine/data'
 
 let booted = false
 
@@ -75,11 +75,14 @@ export default function App() {
     void loadSave().then((saved) => {
       const s = saved as GameState | null
       if (s && s.nodes && s.grid && s.hull) {
+        // re-resolve the hull from the current table so an older save picks up
+        // today's traits and silhouette instead of a frozen copy
+        s.hull = HULLS.find((h) => h.id === s.hull.id) ?? STARTER
         setR(s)
         rebuildTransient()
         ui.view = 'run'
       } else {
-        ui.view = 'hull'
+        ui.view = 'boot'
       }
       // the menu is the front door; a live save shows up as Continue run
       ui.screen = 'menu'
@@ -99,7 +102,12 @@ export default function App() {
     )
   }
 
-  if (!onBridge) {
+  // no run yet (or none loaded): the menu is the only sensible place to be
+  if (onBridge && !R) {
+    ui.screen = 'menu'
+  }
+
+  if (!onBridge || !R) {
     return (
       <div className="shell">
         {ui.screen === 'menu' && <MenuScreen />}
@@ -131,7 +139,6 @@ export default function App() {
           <Icon k="MENU" />
         </button>
       </header>
-      {ui.view === 'hull' && <HullPick />}
       {ui.view === 'run' && R && (R.over ? <EndView /> : <RunView />)}
     </div>
   )

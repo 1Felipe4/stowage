@@ -1,13 +1,14 @@
 import { genStage } from '../src/engine/gen'
 import { R, ui } from '../src/engine/state'
 import { HULLS } from '../src/engine/data'
+const HULL = (id: string) => HULLS.find((h) => h.id === id)!
 import { coverage, massOf, surcharge, capacity, fuelCap, evaluate } from '../src/engine/core'
 import { askJump, cancelJump, confirmJump, outEdges, coord, here } from '../src/engine/actions'
 
 let fail = 0
 const ck = (n: string, ok: boolean, d = '') => { if (!ok) fail++; console.log(`${ok ? 'PASS' : 'FAIL'} ${n}${d ? ' — ' + d : ''}`) }
 
-genStage('COV', 1, null, HULLS[0])
+genStage('COV', 1, null, HULL('freighter'))
 R.credits = 320
 let cov = coverage()
 const thrIdx = R.grid.findIndex(k => k === 'THR')
@@ -33,7 +34,7 @@ ck('no hands -> all mass-bearing bays idle', cov.idle.length === nonThrStowed, `
 ck('no hands -> thruster still active', cov.active[thrIdx] === true)
 
 // ---- chart travel confirmation ----
-genStage('JUMP', 1, null, HULLS[0])
+genStage('JUMP', 1, null, HULL('freighter'))
 R.credits = 320
 R.fuel = Math.min(12, fuelCap())   // never exceed the tanks: overfill fails inspection
 const e0 = outEdges()[0]
@@ -83,7 +84,7 @@ import { courseInfo } from '../src/engine/course'
 import { plotCourse, dropCourse, jump } from '../src/engine/actions'
 import { fuelCap as fcap2 } from '../src/engine/core'
 
-genStage('COURSE', 1, null, HULLS[0])
+genStage('COURSE', 1, null, HULL('freighter'))
 R.credits = 400
 R.fuel = Math.min(12, fcap2())
 ck('no course by default', courseInfo() === null)
@@ -117,7 +118,7 @@ dropCourse()
 ck('course can be cleared', courseInfo() === null)
 
 // arriving at the target auto-clears
-genStage('COURSE2', 1, null, HULLS[0])
+genStage('COURSE2', 1, null, HULL('freighter'))
 R.credits = 400
 R.fuel = Math.min(12, fcap2())
 const nb2 = outEdges()[0]

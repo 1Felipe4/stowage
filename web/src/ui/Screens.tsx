@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { newRun, pickHull, scuttle } from '../engine/actions'
+import { newRun, scuttle } from '../engine/actions'
 import { LESSONS } from '../engine/teach'
 import { R, emit, ui } from '../engine/state'
 import { getScores, loadScores, subscribeScores, type Score } from '../net/scores'
@@ -37,7 +37,7 @@ export function MenuScreen() {
     {
       icon: 'THR',
       label: 'New run',
-      sub: live ? 'Abandons the run in progress' : 'Pick a hull, fresh sector',
+      sub: live ? 'Abandons the run in progress' : 'Yard skiff, fresh sector',
       pri: !live,
       act: () => {
         newRun()
@@ -160,10 +160,8 @@ export function LessonsScreen() {
       emit()
       return
     }
-    // The guided run starts on the Long-hauler: it ships with one engine, so
-    // the first lesson ("fit a second") is a real task rather than a no-op.
     ui.tut = { i: 0 }
-    pickHull(1)
+    newRun()
     go('bridge')
   }
   return (

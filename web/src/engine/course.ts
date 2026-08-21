@@ -1,5 +1,5 @@
 import { R, ui } from './state'
-import { surcharge } from './core'
+import { laneFuel, surcharge } from './core'
 
 /* A plotted course: the player picks a far node on the chart and the bridge
    keeps showing which lane to burn next, so a multi-hop trip can't get lost.
@@ -46,7 +46,7 @@ export function courseInfo(target?: number): Course | null {
     seen.add(best.to)
     edges.add(edgeKey(cur, best.to))
     hops.push(best.to)
-    lanes += best.cost
+    lanes += laneFuel(best.cost)
     cur = best.to
   }
   if (cur !== t) return null

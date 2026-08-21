@@ -1,9 +1,9 @@
 import { HIRES, MOD, TILES, bayName } from './data'
-import { evaluate, fuelCap, surcharge } from './core'
+import { evaluate, fuelCap, laneCost, laneFuel, surcharge } from './core'
 import { genStage } from './gen'
 import { makeSeed } from './rng'
-import { R, emit, setR, ui } from './state'
-import { HULLS } from './data'
+import { R, emit, ui } from './state'
+import { HULLS, STARTER } from './data'
 import type { Edge, GameState, HireId, ModCode, NodeT } from './types'
 import type { OrderAct } from './guidance'
 import { clearRemoteSave, scheduleSave } from '../net/saves'
@@ -98,7 +98,7 @@ function rollEvent() {
 
 /* ---- actions ---- */
 export function jump(e: Edge) {
-  const cost = e.cost + surcharge()
+  const cost = laneCost(e.cost)
   if (R.fuel < cost || !shipOK()) return
   R.fuel -= cost
   R.at = e.b
@@ -310,12 +310,12 @@ export function stuckReason(): string | null {
     if (raisable < MOD.THR.price)
       return `A thruster costs ${MOD.THR.price} and everything aboard would only raise ${raisable}. This deck will never clear.`
   }
-  const cheapest = Math.min(...out.map((e) => e.cost + surcharge()))
+  const cheapest = Math.min(...out.map((e) => laneCost(e.cost)))
   if (R.fuel >= cheapest) return null
   const canBuy = n.fuel > 0 && R.credits >= n.fuel && fuelCap() > R.fuel
   // pawning only sheds surcharge weight — it can never cover a lane's base
   // cost, so with less fuel than the cheapest empty-ship lane it is no escape
-  const minBase = Math.min(...out.map((e) => e.cost))
+  const minBase = Math.min(...out.map((e) => laneFuel(e.cost)))
   if (R.fuel < minBase && !canBuy) return `Every lane out costs ${minBase}+ fuel, you hold ${R.fuel}, and none is for sale here.`
   if (canBuy || canSell) return null
   return 'No lane you can afford, no fuel for sale, nothing to sell.'
@@ -338,9 +338,45 @@ export function scuttle() {
   touch()
 }
 
+/** What this yard will give you for the hull you are standing on. */
+export function tradeIn(): number {
+  return Math.floor(R.hull.price * (sellRate() || 0.4))
+}
+
+/** Net cost of a hull here, after trade-in. */
+export function shipPrice(id: string): number {
+  const h = HULLS.find((x) => x.id === id)
+  if (!h) return Infinity
+  return Math.max(0, h.price - tradeIn())
+}
+
+/** Buy a hull from the yard you are standing in. Your modules and cargo come
+    off the old deck into the hold — the new silhouette is yours to re-solve. */
+export function buyShip(id: string) {
+  const n = here()
+  if (!n.ships.includes(id)) return
+  const h = HULLS.find((x) => x.id === id)
+  if (!h || h.id === R.hull.id) return
+  const net = shipPrice(id)
+  if (R.credits < net) return
+  R.credits -= net
+  R.spend += net
+  // everything stowed comes with you, loose in the hold
+  const carried = R.grid.filter(Boolean) as string[]
+  R.hull = h
+  R.grid = new Array(TILES).fill(null)
+  R.hold = R.hold.concat(carried)
+  R.fuel = Math.min(R.fuel, fuelCap())
+  ui.sel = null
+  ui.focus = []
+  ui.tab = 'deck' // the whole point is the deck changed shape
+  say(`Traded up to the ${h.name.toLowerCase()} for ${net}. Re-stow her.`)
+  touch()
+}
+
 /* ---- run lifecycle ---- */
 export function pickHull(i: number) {
-  const hull = HULLS[i]
+  const hull = HULLS[i] ?? STARTER
   genStage(makeSeed(), 1, null, hull)
   R.credits = Math.round(320 * hull.credits)
   R.opening = R.credits
@@ -374,13 +410,19 @@ export function retire() {
   touch()
 }
 
+/** Every run begins on the starter hull — you buy your way up from there. */
 export function newRun() {
-  ui.view = 'hull'
   ui.confirm = null
+  ui.sel = null
+  ui.focus = []
+  ui.tab = 'deck'
   clearCourse()
-  setR(null)
   clearRemoteSave()
-  emit()
+  genStage(makeSeed(), 1, null, STARTER)
+  R.credits = 320
+  R.opening = R.credits
+  ui.view = 'run'
+  touch()
 }
 
 /* ---- deck selection ---- */
@@ -425,7 +467,7 @@ export function askJump(to: number) {
   if (to === R.at) return
   const e = outEdges().find((x) => x.b === to)
   const sur = surcharge()
-  const lane = e ? e.cost : 0
+  const lane = e ? laneFuel(e.cost) : 0
   const cost = e ? lane + sur : 0
   let why: string | null = null
   if (!e)

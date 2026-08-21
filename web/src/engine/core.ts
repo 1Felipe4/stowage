@@ -15,6 +15,36 @@ export function cnt(k: string): number {
   return R.grid.filter((v) => v === k).length
 }
 
+/** Cells this hull does not have. Nothing may be stowed there. */
+export function blocked(i: number): boolean {
+  return R.hull.blocked?.includes(i) ?? false
+}
+
+/** How many bays this hull actually has. */
+export function bays(): number {
+  return TILES - (R.hull.blocked?.length ?? 0)
+}
+
+/** Fuel for one lane on this hull, before the overmass surcharge. */
+export function laneFuel(base: number): number {
+  return Math.max(1, Math.round(base * (R.hull.fuelMult ?? 1)))
+}
+
+/** Total fuel for one lane, including overmass. */
+export function laneCost(base: number): number {
+  return laneFuel(base) + surcharge()
+}
+
+/** How much a hot module still pushes out after its own shielding. Every
+    shielded face boxes the source in a little more, so shielding manages heat
+    at the source — where cooling instead pulls heat out of a bay. */
+function effectiveSpill(g: Cell[], j: number): number {
+  const m = modOf(g[j])
+  if (!m?.spill) return 0
+  const shielded = NB[j].filter((x) => g[x] === 'SHD').length
+  return Math.max(0, m.spill - shielded)
+}
+
 export function heatField(g: Cell[]): number[] {
   const h = new Array(TILES).fill(0)
   const ambient = R.ambient || 0
@@ -22,13 +52,9 @@ export function heatField(g: Cell[]): number[] {
     let v = ambient
     const m = modOf(g[i])
     if (m) v += m.heat
-    if (g[i] !== 'SHD')
-      for (const j of NB[i]) {
-        // shielding blocks spill into its own bay
-        const n = modOf(g[j])
-        if (!n) continue
-        if (n.spill) v += n.spill
-      }
+    // a shielded bay takes nothing itself, and what other bays receive is
+    // already reduced by whatever shielding boxes the source in
+    if (g[i] !== 'SHD') for (const j of NB[i]) v += effectiveSpill(g, j)
     for (const j of NB[i]) {
       const n = modOf(g[j])
       if (n && n.cool) v -= n.cool
@@ -138,7 +164,7 @@ export function powerBalance(): { prod: number; draw: number } {
 export function evaluate(g: Cell[]): EvalResult {
   const heat = heatField(g),
     chk: Check[] = [],
-    HEATCAP = 5
+    HEATCAP = R.hull.heatCap ?? 5
   const at = (k: string) => {
     const o: number[] = []
     for (let i = 0; i < TILES; i++) if (g[i] === k) o.push(i)
@@ -195,7 +221,8 @@ export function evaluate(g: Cell[]): EvalResult {
     }
     const nb = NB[i]
     if (c.kind === 'volatile') {
-      const bare = nb.filter((j) => g[j] !== 'SHD')
+      // shielding contains, and so does the hull itself — a blocked cell is wall
+      const bare = nb.filter((j) => g[j] !== 'SHD' && !blocked(j))
       const allow = R.specs.includes('HAZMAT') ? 1 : 0
       push(
         c.short,
@@ -244,11 +271,12 @@ export function fits(bag: string[], restarts?: number, steps?: number, rng?: () 
   const rand = rng || Math.random
   restarts = restarts || 70
   steps = steps || 260
-  if (bag.length > TILES) return null
+  const open = [...Array(TILES).keys()].filter((i) => !blocked(i))
+  if (bag.length > open.length) return null
   const keepHold = R.hold,
     keepGrid = R.grid
   R.hold = []
-  const idx = [...Array(TILES).keys()]
+  const idx = open.slice()
   let out: Cell[] | null = null
   for (let t = 0; t < restarts && !out; t++) {
     for (let i = idx.length - 1; i > 0; i--) {
@@ -266,8 +294,8 @@ export function fits(bag: string[], restarts?: number, steps?: number, rng?: () 
       break
     }
     for (let q = 0; q < steps; q++) {
-      const a = Math.floor(rand() * TILES),
-        b = Math.floor(rand() * TILES)
+      const a = idx[Math.floor(rand() * idx.length)],
+        b = idx[Math.floor(rand() * idx.length)]
       if (a === b || (!g[a] && !g[b])) continue
       const tm = g[a]
       g[a] = g[b]

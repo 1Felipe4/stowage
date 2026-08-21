@@ -2,8 +2,9 @@
 import { genStage } from '../src/engine/gen'
 import { R, ui, setR } from '../src/engine/state'
 import { HULLS } from '../src/engine/data'
+const HULL = (id: string) => HULLS.find((h) => h.id === id)!
 import { evaluate, coverage } from '../src/engine/core'
-import { retire, scuttle, callIt, pickHull, pressOn } from '../src/engine/actions'
+import { retire, scuttle, callIt, newRun, pressOn } from '../src/engine/actions'
 import { getScores, recordScore } from '../src/net/scores'
 import { LESSONS, TUT } from '../src/engine/teach'
 
@@ -13,26 +14,27 @@ const ck = (n: string, ok: boolean, d = '') => { if (!ok) fail++; console.log(`$
 // ---- lessons / tutorial content ----
 ck('four lesson cards', LESSONS.length === 4, String(LESSONS.length))
 ck('every lesson has lines and a title', LESSONS.every(l => l.t && l.lines.length >= 3))
-ck('seven tutorial steps', TUT.length === 7, String(TUT.length))
+ck('six tutorial steps', TUT.length === 6, String(TUT.length))
 ck('every tut step names a pane and has a goal', TUT.every(s => !!s.tab && typeof s.done === 'function' && !!s.title && !!s.body))
 
 // ---- tutorial predicates behave against real state ----
-genStage('TUT', 1, null, HULLS[0])   // freighter starts with 2 engines, empty hold
+genStage('TUT', 1, null, HULL('freighter'))   // freighter starts with 2 engines, empty hold
 R.credits = 320
-ck('step 1 (two engines) already met on freighter', TUT[0].done())
-ck('step 2 (hold clear) met at stage start', TUT[1].done())
-ck('step 3 (a contract signed) not met yet', !TUT[2].done())
-ck('step 5 (inspection) met on a fresh legal deck', TUT[4].done() === evaluate(R.grid).ok)
-ck('step 6 (hands) matches coverage', TUT[5].done() === (coverage().idle.length === 0))
-ck('step 7 (travelled) not met at start', !TUT[6].done())
+ck('sign step not met before signing', !TUT[0].done())
+ck('stow step not met before signing', !TUT[1].done())
+ck('inspection step matches evaluate()', TUT[2].done() === evaluate(R.grid).ok)
+ck('hands step matches coverage', TUT[3].done() === (coverage().idle.length === 0))
+ck('travel step not met at start', !TUT[4].done())
 
 // hauler starts with ONE engine — step 1 must be unmet there
-genStage('TUT2', 1, null, HULLS[1])
-ck('step 1 unmet on the one-engine hauler', !TUT[0].done())
+// the tutorial now opens on signing a contract, which is never pre-satisfied
+genStage('TUT2', 1, null, HULL('skiff'))
+ck('tutorial step 1 is unmet on a fresh skiff', !TUT[0].done())
+ck('the guided run has a shipyard step', TUT.some((t) => t.portTab === 'ships'))
 
 // ---- run-end scoring ----
 const before = getScores().length
-genStage('SC1', 1, null, HULLS[0])
+genStage('SC1', 1, null, HULL('freighter'))
 R.credits = 900; R.cleared = 2; R.stage = 3; R.delivered = 5
 retire()
 let board = getScores()
@@ -41,12 +43,12 @@ ck('score records credits/stage/contracts', board[0].credits === 900 && board[0]
    JSON.stringify(board[0] && { c: board[0].credits, s: board[0].stage, d: board[0].delivered }))
 ck('retire is tagged retired', board.find(b => b.credits === 900)?.kind === 'retired')
 
-genStage('SC2', 1, null, HULLS[2])
+genStage('SC2', 1, null, HULL('tug'))
 R.credits = 120; R.delivered = 1
 scuttle()
 ck('scuttling banks a bust', getScores().some(b => b.credits === 120 && b.kind === 'bust'))
 
-genStage('SC3', 1, null, HULLS[0])
+genStage('SC3', 1, null, HULL('freighter'))
 R.credits = 40
 callIt()
 ck('CALL IT banks a bust', getScores().some(b => b.credits === 40 && b.kind === 'bust'))
@@ -64,7 +66,7 @@ ck('board is sorted by credits', board.every((r, i) => i === 0 || board[i - 1].c
 ck('the best run is on top', board[0].credits === 5000, String(board[0].credits))
 
 // ---- delivered survives a stage carry ----
-genStage('CARRY', 1, null, HULLS[0])
+genStage('CARRY', 1, null, HULL('freighter'))
 R.delivered = 3; R.credits = 500; R.cleared = 1; R.over = 'clear'
 R.summary = { wages: 0, penalty: 0, forfeits: [], opening: 400, revenue: 200, spend: 100, profit: 100, best: 150 }
 pressOn()
@@ -73,10 +75,12 @@ ck('endKind is not carried', R.endKind === undefined)
 
 // ---- a new run wipes the ui tutorial-independent state ----
 ui.tut = { i: 0 }
-pickHull(1)   // the guided run's hull: one engine, so step 1 is a real task
+newRun()      // every run now starts on the skiff
 ck('new run keeps the tutorial if one was started', ui.tut?.i === 0)
 ck('new run starts on the deck pane', ui.tab === 'deck')
-ck('guided-run hull makes step 1 meaningful', !TUT[0].done(), `engines=${R.grid.filter(k => k === 'THR').length}`)
+ck('new run starts on the starter hull', R.hull.id === 'skiff', R.hull.id)
+ck('starter deck is legal to begin with', evaluate(R.grid).ok,
+   evaluate(R.grid).checks.filter(c => !c.ok).map(c => c.lb).join(','))
 void setR
 
 /* ---- directive actions: every alert must point somewhere useful ---- */
@@ -84,7 +88,7 @@ import { orders } from '../src/engine/guidance'
 import { runOrder, accept, buyFuel } from '../src/engine/actions'
 import { courseInfo } from '../src/engine/course'
 
-genStage('ORD', 1, null, HULLS[0])
+genStage('ORD', 1, null, HULL('freighter'))
 R.credits = 400
 R.fuel = 12
 let o = orders()
@@ -103,7 +107,7 @@ if (o.k === 'bad' && o.act.kind === 'fixDeck') {
 } else console.log('SKIP fixDeck (this board failed non-positionally: ' + o.t + ')')
 
 // low fuel at a fuel line should raise a market alert
-genStage('ORD2', 1, null, HULLS[0])
+genStage('ORD2', 1, null, HULL('freighter'))
 R.credits = 400
 R.fuel = 1
 const fuelNode = R.nodes.find(nd => nd.fuel > 0)!
@@ -115,7 +119,7 @@ if (o.k === 'buy' && /fuel/i.test(o.t)) {
 } else console.log('SKIP low-fuel alert (board raised: ' + o.t + ')')
 
 // a contract on offer here should open contracts, not the deck
-genStage('ORD3', 1, null, HULLS[0])
+genStage('ORD3', 1, null, HULL('freighter'))
 R.credits = 400
 R.fuel = 12
 const offer = R.cargo.find(c => !c.need)!
@@ -127,7 +131,7 @@ if (/on offer here/.test(o.t)) {
 } else console.log('SKIP offer alert (board raised: ' + o.t + ')')
 
 // work waiting at a distant node should plot a course to it
-genStage('ORD4', 1, null, HULLS[0])
+genStage('ORD4', 1, null, HULL('freighter'))
 R.credits = 400
 R.fuel = 10   // not thin (no fuel alert), not brimming (no tank alert)
 const far = R.nodes.filter(nd => nd.id !== R.at && !R.adj![R.at].some(e => e.to === nd.id))
@@ -145,7 +149,7 @@ if (o.act.kind === 'course') {
 }
 
 // an adjacent target needs no course — just the lanes
-genStage('ORD5', 1, null, HULLS[0])
+genStage('ORD5', 1, null, HULL('freighter'))
 R.credits = 400; R.fuel = 10
 const nb = R.adj![R.at][0].to
 R.cargo.forEach(c => { c.at = nb; c.taken = false; c.aboard = false; c.done = false; c.need = null })

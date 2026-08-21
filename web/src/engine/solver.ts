@@ -1,5 +1,5 @@
 import { HIRES, KINDS, MOD } from './data'
-import { modOf } from './core'
+import { bays, modOf } from './core'
 import { R } from './state'
 import type { BestPlan } from './types'
 
@@ -62,6 +62,9 @@ export function solveStage(): BestPlan {
     }
     if (route >= INF) continue
     const p = planCost(set, route)
+    // a plan that cannot physically fit this hull is not a plan. Small hulls
+    // therefore get offered smaller runs rather than impossible ones.
+    if (p.bays > bays()) continue
     if (p.profit > best.profit) best = { profit: p.profit, set, fuel: p.fuel, spend: p.spend, revenue: p.revenue }
   }
   return best

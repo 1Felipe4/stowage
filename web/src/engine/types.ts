@@ -41,9 +41,20 @@ export interface HireDef {
 export interface Hull {
   id: string
   name: string
+  /** 0 is the starter; dealers stock higher tiers as the stages deepen */
+  tier: number
+  /** what a dealer charges. The starter is free — you begin on it */
+  price: number
   base: number
+  /** no bay on this hull may read above this — insulated hulls tolerate more */
+  heatCap: number
+  /** lane fuel multiplier: lean hulls burn less, heavy ones more */
+  fuelMult: number
+  /** cell indices that do not exist on this hull, giving it its silhouette */
+  blocked: number[]
   credits: number
   crew: HireId[]
+  /** starting kit — only ever used by the hull a run begins on */
   mods: ModCode[]
   blurb: string
 }
@@ -80,6 +91,8 @@ export interface NodeT {
   warp: boolean
   stock: ModCode[]
   hires: HireId[]
+  /** hull ids for sale here, empty when this rock has no shipyard */
+  ships: string[]
   rate?: number
 }
 

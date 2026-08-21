@@ -4,7 +4,8 @@
    Run from repo root:  npx tsx web/test/pilot.ts [runs] [stages] [seed]     */
 import { genStage } from '../src/engine/gen'
 import { R } from '../src/engine/state'
-import { HULLS, MOD } from '../src/engine/data'
+import { HULLS, MOD, STARTER } from '../src/engine/data'
+const HULL = (id: string) => HULLS.find((h) => h.id === id)!
 import { evaluate, fits, fuelCap, souls, surcharge } from '../src/engine/core'
 import {
   accept, buyFuel, buyMod, doWarp, here, hire, jettison, jump, outEdges, payOff, pressOn, sellMod, sellRate, shipOK, tapBay, tapHold
@@ -51,14 +52,16 @@ function fixDeck(): boolean {
 
 function shopAndCrew() {
   const n = here()
+  // never spend down to nothing: keep enough back to fuel a way out
+  const reserve = R.medFuel * 8
   const cntOf = (x: string) => ([...R.grid, ...R.hold].filter(Boolean) as string[]).filter((v) => v === x).length
   n.hires.forEach((id) => {
     const w = whyHire(id)
-    if (!w.need || R.credits < 26 + 48) return
+    if (!w.need || R.credits < 26 + 48 + reserve) return
     // house the new soul first — hiring past bunks/air fails inspection
-    while (cntOf('BRT') * 2 < souls() + 1 && n.stock.includes('BRT') && R.credits >= MOD.BRT.price + 80 && R.grid.includes(null))
+    while (cntOf('BRT') * 2 < souls() + 1 && n.stock.includes('BRT') && R.credits >= MOD.BRT.price + 80 + reserve && R.grid.includes(null))
       buyMod('BRT')
-    while (cntOf('LSP') * 2 < souls() + 1 && n.stock.includes('LSP') && R.credits >= MOD.LSP.price + 80 && R.grid.includes(null))
+    while (cntOf('LSP') * 2 < souls() + 1 && n.stock.includes('LSP') && R.credits >= MOD.LSP.price + 80 + reserve && R.grid.includes(null))
       buyMod('LSP')
     if (cntOf('BRT') * 2 >= souls() + 1 && cntOf('LSP') * 2 >= souls() + 1) hire(id)
   })
@@ -71,7 +74,7 @@ function shopAndCrew() {
   }
   for (const k of n.stock) {
     let guard = 0
-    while (whyMod(k).need > 0 && R.credits >= MOD[k].price + 30 && R.grid.includes(null) && guard++ < 4) {
+    while (whyMod(k).need > 0 && R.credits >= MOD[k].price + 30 + reserve && R.grid.includes(null) && guard++ < 4) {
       // never buy a power drawer this port cannot also power
       if (MOD[k].power < 0 && headroom() + MOD[k].power < 0 && !(n.stock.includes('BAT') && R.credits >= MOD[k].price + MOD.BAT.price + 30))
         break
@@ -79,7 +82,7 @@ function shopAndCrew() {
     }
   }
   // a tankless hull (tug) must buy range before anything else
-  while (fuelCap() < 12 && n.stock.includes('TNK') && R.credits >= MOD.TNK.price + 40 && R.grid.includes(null)) buyMod('TNK')
+  while (fuelCap() < 12 && n.stock.includes('TNK') && R.credits >= MOD.TNK.price + 40 + reserve && R.grid.includes(null)) buyMod('TNK')
 }
 
 /** Shed whatever cannot be sustained: batteries for power, surplus crew for
@@ -88,6 +91,25 @@ function recover(plan: Set<number>): boolean {
   if (fixDeck()) return true
   const failing = () => evaluate(R.grid).checks.filter((c) => !c.ok).map((c) => c.lb)
   const n = here()
+  // heat: buy cooling if this yard sells it, else shed a hot module
+  let guardH = 0
+  while (failing().includes('HEAT') && guardH++ < 4) {
+    const cool = (['RAD', 'CRY'] as ModCode[]).find(
+      (k) => n.stock.includes(k) && R.credits >= MOD[k].price && R.grid.includes(null)
+    )
+    if (cool) {
+      buyMod(cool)
+      if (fixDeck()) return true
+      continue
+    }
+    // no cooling for sale: drop a spare reactor, then anything hot
+    const rct = R.grid.filter((k) => k === 'RCT').length
+    const idx = R.grid.findIndex((k) => (k === 'RCT' && rct > 1) || k === 'LSP')
+    if (idx < 0) break
+    if (sellRate() > 0) sellMod(R.grid[idx] as ModCode, 'bay', idx)
+    else jettison(R.grid[idx]!)
+    if (fixDeck()) return true
+  }
   while (failing().includes('POWER') && n.stock.includes('BAT') && R.credits >= MOD.BAT.price && R.grid.includes(null)) {
     buyMod('BAT')
     if (fixDeck()) return true
@@ -123,15 +145,24 @@ function recover(plan: Set<number>): boolean {
 
 let clears = 0, attempts = 0
 const failures: string[] = []
+const perHull: Record<string, { a: number; c: number }> = {}
+const perStage: Record<number, { a: number; c: number }> = {}
 
 for (let run = 0; run < RUNS; run++) {
-  const hull = HULLS[run % HULLS.length]
+  // every real run starts on the starter hull; testing fresh starts on hulls
+  // you can only ever *buy* was measuring a scenario the game does not have
+  const hull = STARTER
   genStage(`${SEED}-${run}`, 1, null, hull)
   R.credits = Math.round(320 * hull.credits)
   R.opening = R.credits
 
   for (let stage = 1; stage <= STAGES && !R.over; stage++) {
     attempts++
+    perHull[hull.id] = perHull[hull.id] || { a: 0, c: 0 }
+    perHull[hull.id].a++
+    perStage[R.stage] = perStage[R.stage] || { a: 0, c: 0 }
+    perStage[R.stage].a++
+    const stageNow = R.stage
     // fly the full contract set the generator's solver proved profitable
     const plan = new Set(R.best!.set)
     // shed specialists no planned cargo needs — pure wage drag otherwise
@@ -174,7 +205,7 @@ for (let run = 0; run < RUNS; run++) {
         const legs =
           (pickup ? R.D![R.at][pickup.at] + R.D![pickup.at][pickup.to] : aboard.length ? R.D![R.at][aboard[0].to] : 0) +
           R.warpCost + 8
-        while (fuelCap() < Math.min(legs, 24) && n.stock.includes('TNK') && R.credits >= MOD.TNK.price + 40 && R.grid.includes(null))
+        while (fuelCap() < Math.min(legs, 24) && n.stock.includes('TNK') && R.credits >= MOD.TNK.price + 40 + R.medFuel * 6 && R.grid.includes(null))
           buyMod('TNK')
         if (R.fuel < Math.min(legs, fuelCap())) buyFuel(legs - R.fuel)
       }
@@ -225,6 +256,8 @@ for (let run = 0; run < RUNS; run++) {
     }
     if (R.over === 'clear') {
       clears++
+      perHull[hull.id].c++
+      perStage[stageNow].c++
       if (stage < STAGES) pressOn()
     } else if (!R.over) {
       break
@@ -233,6 +266,10 @@ for (let run = 0; run < RUNS; run++) {
 }
 
 console.log(`pilot: ${clears}/${attempts} stage attempts cleared (${RUNS} runs × up to ${STAGES} stages)`)
+Object.entries(perHull).forEach(([id, v]) =>
+  console.log(`  hull ${id.padEnd(10)} ${v.c}/${v.a} (${Math.round((v.c / v.a) * 100)}%)`))
+Object.entries(perStage).forEach(([st, v]) =>
+  console.log(`  stage ${st}      ${v.c}/${v.a} (${Math.round((v.c / v.a) * 100)}%)`))
 failures.slice(0, 8).forEach((f) => console.log('  ' + f))
 if (clears / attempts < 0.7) {
   console.log('WINNABILITY BELOW THRESHOLD')
