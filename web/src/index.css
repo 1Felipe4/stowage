@@ -487,3 +487,5 @@ svg.map{display:block;width:100%;height:auto}
 /* attention dot on a port sub-tab */
 .seg button{position:relative}
 .segdot{position:absolute;top:5px;right:7px;width:6px;height:6px;border-radius:9999px;background:var(--amber)}
+.ambient{font-family:var(--mono);font-size:9px;letter-spacing:.12em;font-weight:600;padding:3px 7px;border-radius:9999px;
+ background:rgba(242,121,61,.12);border:1px solid rgba(242,121,61,.4);color:#FDBA74}

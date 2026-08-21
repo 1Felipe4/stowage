@@ -22,8 +22,8 @@ export function bayName(i: number): string {
 export const MOD: Record<ModCode, ModDef> = {
   RCT: {
     code: 'RCT', icon: 'RCT', name: 'Reactor', short: 'REACTOR', tok: ['P +6', 'H +3'],
-    power: 6, heat: 3, spill: 1, price: 42,
-    blurb: '6 power, the most of any bay. Runs at +3 heat and pushes +1 into every touching bay unless shielding blocks it.'
+    power: 6, heat: 3, spill: 2, price: 42,
+    blurb: '6 power, the most of any bay. Runs at +3 heat and pushes +2 into every touching bay unless shielding blocks it.'
   },
   BAT: {
     code: 'BAT', icon: 'BAT', name: 'Battery', short: 'BATTERY', tok: ['P +2'],
@@ -52,8 +52,8 @@ export const MOD: Record<ModCode, ModDef> = {
   },
   THR: {
     code: 'THR', icon: 'THR', name: 'Thruster', short: 'THRUSTER', tok: ['P −2', '+4 cap'],
-    power: -2, heat: 2, price: 32,
-    blurb: 'Each engine lifts 4 more bays and weighs nothing itself — thrust cancels its own mass. Two is the legal minimum.'
+    power: -2, heat: 2, spill: 1, price: 32,
+    blurb: 'Each engine lifts 4 more bays and weighs nothing itself — thrust cancels its own mass. Runs at +2 heat and pushes +1 into touching bays. Two is the legal minimum.'
   },
   SHD: {
     code: 'SHD', icon: 'SHD', name: 'Shielding', short: 'SHIELD', tok: ['blocks heat'],

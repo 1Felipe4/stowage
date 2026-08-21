@@ -17,8 +17,9 @@ export function cnt(k: string): number {
 
 export function heatField(g: Cell[]): number[] {
   const h = new Array(TILES).fill(0)
+  const ambient = R.ambient || 0
   for (let i = 0; i < TILES; i++) {
-    let v = 0
+    let v = ambient
     const m = modOf(g[i])
     if (m) v += m.heat
     if (g[i] !== 'SHD')

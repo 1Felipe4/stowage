@@ -1,5 +1,5 @@
 import { HIRES, MOD } from './data'
-import { capacity, deckCrew, evaluate, fuelCap, massOf, modOf, souls, surcharge } from './core'
+import { capacity, deckCrew, evaluate, fuelCap, heatField, massOf, modOf, souls, surcharge } from './core'
 import { coord, here } from './actions'
 import { R } from './state'
 import type { HireId, ModCode } from './types'
@@ -35,11 +35,18 @@ export function whyMod(k: ModCode): Why {
     const v = R.cargo.filter((x) => x.aboard && x.kind === 'volatile').length
     return v ? { need: Math.max(0, 2 * v - c('SHD')), s: 'volatile cargo must be walled in' } : { need: 0, s: 'blocks reactor heat spill' }
   }
-  if (k === 'CRY') {
-    const v = R.cargo.some((x) => x.aboard && x.kind === 'cold')
-    return v && c('CRY') < 1 ? { need: 1, s: 'cold chain spoils without one' } : { need: 0, s: 'cooling, at 3 power' }
+  if (k === 'CRY' && R.cargo.some((x) => x.aboard && x.kind === 'cold') && c('CRY') < 1)
+    return { need: 1, s: 'cold chain spoils without one' }
+  if (k === 'RAD' || k === 'CRY') {
+    // cooling counts as needed while any bay is over the line, or sitting on it
+    // with ambient heat still to come
+    const heat = heatField(R.grid)
+    const hot = R.grid.filter((v, i) => !!v && heat[i] > 5).length
+    const atCap = R.grid.filter((v, i) => !!v && heat[i] === 5).length
+    if (hot) return { need: Math.max(1, Math.ceil(hot / 2)), s: `${hot} bay${hot > 1 ? 's' : ''} over the heat line` }
+    if (atCap && k === 'RAD') return { need: 1, s: `${atCap} bay${atCap > 1 ? 's' : ''} sitting on the heat line` }
+    return { need: 0, s: k === 'RAD' ? 'pulls 3 heat from touching bays' : 'cooling, at 3 power' }
   }
-  if (k === 'RAD') return { need: 0, s: 'pulls heat from touching bays' }
   let prod = 0,
     draw = 0
   owned.forEach((v) => {

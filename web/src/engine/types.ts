@@ -169,6 +169,8 @@ export interface GameState {
   medFuel: number
   /** contracts delivered across the whole run, for the score line */
   delivered: number
+  /** background heat every bay carries this deep in — rises with the stage */
+  ambient: number
   /** how the run finished, once it has */
   endKind?: 'retired' | 'bust'
   best?: BestPlan

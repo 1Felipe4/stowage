@@ -112,12 +112,19 @@ export function genStage(seed: string, stage: number, carry: Carry | null, start
       fuel: 0, credits: carry ? carry.credits : 0, at: 0, visited: [0], log: [], over: null, event: null,
       accepted: [], opening: 0, revenue: 0, spend: 0,
       wage: 16 + 2 * (stage - 1), warpCost: 4 + (stage - 1), margin: 55, medFuel: 5,
-      delivered: carry ? carry.delivered : 0
+      delivered: carry ? carry.delivered : 0,
+      // deep space runs hot: every second stage adds a degree to every bay,
+      // so a deck that cleared inspection last stage may not clear this one.
+      // Capped at 3: beyond that even a well-cooled reactor cannot be placed.
+      ambient: Math.min(3, Math.floor((stage - 1) / 2))
     })
     if (!carry) {
-      // lay the starting hull out properly
+      // lay the starting hull out properly. A fresh start this deep needs
+      // cooling in the kit or a bare reactor cannot be placed at all.
       R.grid = new Array(TILES).fill(null)
-      const laid = fits(hull.mods.slice(), 120, 320, rng)
+      const kit = hull.mods.slice()
+      if (R.ambient > 0) for (let i = 0; i < hull.mods.filter((k) => k === 'RCT').length; i++) kit.push('RAD')
+      const laid = fits(kit, 120, 320, rng)
       if (!laid) continue
       R.grid = laid
     }
@@ -136,6 +143,9 @@ export function genStage(seed: string, stage: number, carry: Carry | null, start
     cargo.forEach((c) => {
       if (c.support) musts.add(c.support)
     })
+    // once ambient heat is on, cooling must be buyable or a hot deck is a
+    // soft-lock: a reactor alone reads 3 + ambient and cannot be re-arranged out
+    if (R.ambient > 0) musts.add('RAD')
     const ports = R.nodes.filter((nd) => nd.port)
     if (!ports.length) continue
     ports[0].stock = [...musts, 'RCT', 'THR']

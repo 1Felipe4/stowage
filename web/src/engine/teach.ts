@@ -26,9 +26,10 @@ export const LESSONS: Lesson[] = [
   {
     t: 'Heat',
     lines: [
-      { icon: 'RCT', text: 'A reactor makes 6 power, runs at +3 heat and pushes +1 into every bay it touches.' },
+      { icon: 'RCT', text: 'A reactor makes 6 power, runs at +3 heat and pushes +2 into every bay it touches. Engines run hot too, spilling +1.' },
       { icon: 'RAD', text: 'A radiator pulls 3 heat out of each neighbour, a cryo unit 2, and shielding stops reactor spill dead.' },
-      { icon: 'ALERT', text: 'No occupied bay may read above +5. The number in the corner of each bay is what it reads now.' }
+      { icon: 'ALERT', text: 'No occupied bay may read above +5. The number in the corner of each bay is what it reads now.' },
+      { icon: 'WARP', text: 'Deeper stages add ambient heat to every bay, so a deck that passed last stage can fail the next. Cooling is an investment, not a one-off.' }
     ]
   },
   {

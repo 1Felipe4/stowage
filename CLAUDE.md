@@ -37,6 +37,7 @@ can land later without re-architecting.
   confirmation flow, and course plotting (route agrees with dijkstra, advances
   on travel, auto-clears on arrival).
 - `npx tsx web/test/share.ts` — run-card facts for every ending.
+- `npx tsx web/test/heat.ts` — heat geometry, ambient scaling, feasibility at depth.
 - `npx tsx web/test/screens.ts` — lesson/tutorial content, tutorial predicates
   against real state, and run-end scoring. All run headless (no DOM needed).
 
@@ -63,6 +64,26 @@ can land later without re-architecting.
 - Travel is always confirmed: chart nodes and lane cards both call `askJump()`,
   which stores a `JumpPlan` (with `why` when blocked); only `confirmJump()` moves
   the ship, and it routes through `jump()` so fuel and inspection are re-guarded.
+
+## Heat is the escalating axis
+
+Heat used to be decorative: an audit of 160 starting decks found the hottest bay
+ever seen was 4 against a cap of 5, and no arrangement could break it. Now:
+
+- Reactors spill 2 (was 1) and thrusters spill 1 (was 0), so a dense power
+  cluster is illegal and spacing/shielding is a real decision from stage 1.
+- `R.ambient` adds background heat to every bay: `min(3, floor((stage-1)/2))`.
+  A deck that cleared inspection last stage can fail the next, so cooling is an
+  ongoing investment rather than a one-off. Capped at 3 because beyond that even
+  a cooled reactor cannot be placed at all.
+- Two guards keep it from soft-locking: `RAD` is forced into the first port's
+  stock whenever ambient > 0, and a fresh start at depth gets a radiator per
+  reactor in its kit (a bare reactor reads 3 + ambient and cannot be arranged out).
+- `whyMod('RAD'/'CRY')` reports cooling as NEEDED when any bay is over the line,
+  or sitting on it with more ambient still to come — this is what makes the
+  market flag it, and what lets the scripted pilot survive depth.
+- `web/test/heat.ts` locks all of this down, including that cold chain is still
+  satisfiable under ambient and that a hot bag can still be laid out at ambient 3.
 
 ## Screens, teaching, scores
 

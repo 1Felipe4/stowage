@@ -535,6 +535,11 @@ export function RunView() {
 
           <div className="deck-head">
             <div className="sec-h">DECK · {R.hull.name.toUpperCase()}</div>
+            {R.ambient > 0 && (
+              <div className="ambient" title={`This deep in, every bay runs ${R.ambient} hotter.`}>
+                AMBIENT +{R.ambient}
+              </div>
+            )}
             <div style={{ flex: 1 }} />
             <div className={'pill ' + (bad.length ? 'bad' : 'ok')}>
               <Icon k={bad.length ? 'ALERT' : 'OKRING'} />
