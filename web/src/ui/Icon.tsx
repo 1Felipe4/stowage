@@ -13,7 +13,18 @@ const ICONS: Record<string, string> = {
   FUEL: '<path d="M12 2.5s6 6.3 6 10.6a6 6 0 01-12 0C6 8.8 12 2.5 12 2.5z"/><path d="M9.5 14.2c.4 1.7 1.4 2.6 2.9 2.8"/>',
   PORT: '<circle cx="12" cy="12" r="7.5"/><path d="M12 4.5v15M4.5 12h15"/>',
   WARP: '<circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.8 2.8M16.2 16.2L19 19M19 5l-2.8 2.8M7.8 16.2L5 19"/>',
-  MASS: '<path d="M4 20h16L12 4z"/><path d="M8 15h8"/>'
+  MASS: '<path d="M4 20h16L12 4z"/><path d="M8 15h8"/>',
+  /* UI glyphs for the bridge chrome (lucide-style strokes) */
+  CHECK: '<path d="M20 6L9 17l-5-5"/>',
+  X: '<path d="M18 6L6 18M6 6l12 12"/>',
+  ALERT: '<path d="M10.3 3.8L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.8a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+  OKRING: '<circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/>',
+  GRIDX: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+  ROUTE: '<circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M12 19h4.5a3.5 3.5 0 000-7h-9a3.5 3.5 0 010-7H12"/>',
+  TAGI: '<path d="M12 2H2v10l9.3 9.3a2 2 0 002.8 0l7-7a2 2 0 000-2.8z"/><circle cx="7" cy="7" r="1.5"/>',
+  STOWIN: '<path d="M12 3v12M6 9l6 6 6-6"/><path d="M5 21h14"/>',
+  PLUS: '<path d="M12 5v14M5 12h14"/>',
+  MINUS: '<path d="M5 12h14"/>'
 }
 
 export function Icon({ k, cls }: { k: string; cls?: string }) {

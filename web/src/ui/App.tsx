@@ -1,42 +1,66 @@
 import { useEffect, useSyncExternalStore } from 'react'
-import { capacity, fuelCap, massOf } from '../engine/core'
+import { capacity, fuelCap, massOf, powerBalance } from '../engine/core'
+import { coord, here } from '../engine/actions'
 import { rebuildTransient } from '../engine/map'
 import { R, emit, getVersion, setR, subscribe, ui } from '../engine/state'
 import type { GameState } from '../engine/types'
 import { loadSave } from '../net/saves'
 import { EndView } from './EndView'
 import { HullPick } from './HullPick'
+import { Icon } from './Icon'
 import { RunView } from './RunView'
 
 let booted = false
 
-function Gauges() {
+function Meter({ label, val, pct, color, danger, deskOnly }: {
+  label: string
+  val: string
+  pct: number
+  color: string
+  danger?: boolean
+  deskOnly?: boolean
+}) {
+  return (
+    <div className={'meter' + (deskOnly ? ' m-desk' : '')}>
+      <div className="mv">
+        <b style={{ color: danger ? 'var(--red)' : color }}>{val}</b>
+        <span>{label}</span>
+      </div>
+      <div className="bar">
+        <i style={{ width: `${Math.max(0, Math.min(100, pct))}%`, background: danger ? 'var(--red)' : color }} />
+      </div>
+    </div>
+  )
+}
+
+function Meters() {
   const m = massOf(),
     cap = capacity(),
-    over = m > cap
+    fcap = fuelCap()
+  const { prod, draw } = powerBalance()
+  const net = prod - draw
   return (
-    <>
-      <div className="g cr">
-        <b>{R.credits}</b>
-        <span>CRED</span>
-      </div>
-      <div className={'g fu ' + (R.fuel <= 3 ? 'low' : '')}>
-        <b>
-          {R.fuel}/{fuelCap()}
-        </b>
-        <span>FUEL</span>
-      </div>
-      <div className={'g ms ' + (over ? 'low' : '')}>
-        <b>
-          {m}/{cap}
-        </b>
-        <span>MASS</span>
-      </div>
-      <div className="g st">
-        <b>{R.stage}</b>
-        <span>STG</span>
-      </div>
-    </>
+    <div className="meters">
+      <Meter label="CRED" val={String(R.credits)} pct={Math.min(100, R.credits / 6)} color="var(--amber)" />
+      <Meter label="FUEL" val={`${R.fuel}/${fcap}`} pct={fcap ? (R.fuel / fcap) * 100 : 0} color="var(--blue)" danger={R.fuel <= 3} />
+      <Meter label="MASS" val={`${m}/${cap}`} pct={cap ? (m / cap) * 100 : 100} color="var(--ink)" danger={m > cap} />
+      <Meter label="POWER" val={net >= 0 ? `+${net}` : String(net)} pct={prod ? (draw / prod) * 100 : draw ? 100 : 0} color="var(--green)" danger={draw > prod} deskOnly />
+      <Meter label="STAGE" val={String(R.stage)} pct={Math.min(100, R.stage * 20)} color="var(--mut)" deskOnly />
+    </div>
+  )
+}
+
+function NodeChip() {
+  const n = here()
+  const kind = n.port ? 'TRADING PORT' : n.warp ? 'WARP POINT' : n.fuel ? 'FUEL STOP' : 'BARE ROCK'
+  return (
+    <div className="nodechip">
+      <Icon k={n.warp ? 'WARP' : 'PORT'} />
+      <span>
+        {coord(n)}
+        <span className="chip-long"> · {kind}</span>
+      </span>
+    </div>
   )
 }
 
@@ -59,16 +83,18 @@ export default function App() {
     })
   }, [])
 
-  const showGauges = ui.view === 'run' && R && !R.over
+  const inRun = ui.view === 'run' && R && !R.over
 
   return (
-    <div className="wrap">
-      <div className="hud">
+    <div className="shell">
+      <header className="hud">
         <div className="brand">
           STOW<em>AGE</em>
         </div>
-        <div className="gauges">{showGauges ? <Gauges /> : null}</div>
-      </div>
+        {inRun ? <NodeChip /> : null}
+        <div className="sp" />
+        {inRun ? <Meters /> : null}
+      </header>
       {ui.view === 'boot' && <div className="boot">RAISING THE MANIFEST…</div>}
       {ui.view === 'hull' && <HullPick />}
       {ui.view === 'run' && R && (R.over ? <EndView /> : <RunView />)}

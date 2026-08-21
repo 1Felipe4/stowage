@@ -11,13 +11,19 @@ export function setR(v: GameState | null) {
 
 export type Sel = { t: 'bay'; i: number } | { t: 'hold'; n: number }
 
+export type Tab = 'port' | 'deck' | 'lanes' | 'chart'
+export type PortTab = 'market' | 'crew' | 'contracts'
+
 export interface UiState {
   view: 'boot' | 'hull' | 'run'
   sel: Sel | null
   focus: number[]
+  /** active pane on mobile; desktop shows all three panes regardless */
+  tab: Tab
+  portTab: PortTab
 }
 
-export const ui: UiState = { view: 'boot', sel: null, focus: [] }
+export const ui: UiState = { view: 'boot', sel: null, focus: [], tab: 'deck', portTab: 'market' }
 
 let version = 0
 const subs = new Set<() => void>()

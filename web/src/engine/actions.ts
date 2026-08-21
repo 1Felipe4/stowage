@@ -102,6 +102,7 @@ export function jump(e: Edge) {
   if (!R.visited.includes(e.b)) R.visited.push(e.b)
   ui.sel = null
   ui.focus = []
+  ui.tab = 'port' // arriving somewhere new — show what the rock offers
   rollEvent()
   say(`Burned ${cost} to ${coord(here())}.`)
   dropOff()
@@ -137,6 +138,8 @@ export function accept(i: number) {
   c.aboard = true
   R.hold.push('@' + i)
   R.accepted.push(i)
+  ui.tab = 'deck' // the crate is in the hold — go stow it
+  ui.sel = { t: 'hold', n: R.hold.length - 1 }
   say(`${c.short} signed for, bound for ${coord(R.nodes[c.to])}.`)
   touch()
 }

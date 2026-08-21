@@ -85,6 +85,19 @@ export function surcharge(): number {
   return Math.ceil(Math.max(0, massOf() - capacity()) / 2)
 }
 
+/** Made vs drawn across the deck — feeds the HUD power meter. */
+export function powerBalance(): { prod: number; draw: number } {
+  let prod = 0,
+    draw = 0
+  for (const k of R.grid) {
+    const m = modOf(k)
+    if (!m) continue
+    if (m.power > 0) prod += m.power
+    else draw += -m.power
+  }
+  return { prod, draw }
+}
+
 export function evaluate(g: Cell[]): EvalResult {
   const heat = heatField(g),
     chk: Check[] = [],

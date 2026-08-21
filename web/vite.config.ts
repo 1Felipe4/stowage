@@ -12,8 +12,8 @@ export default defineConfig({
         name: 'STOWAGE',
         short_name: 'STOWAGE',
         description: 'Pack the deck, work the lanes, jump out ahead.',
-        theme_color: '#081120',
-        background_color: '#081120',
+        theme_color: '#05080F',
+        background_color: '#05080F',
         display: 'standalone',
         icons: [
           { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
