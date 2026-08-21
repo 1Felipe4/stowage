@@ -79,6 +79,7 @@ export function planCost(set: number[], route: number) {
   })
   let shields = 0,
     cryo = 0
+  const missingSpecs = new Set<string>()
   picked.forEach((c) => {
     bays += KINDS[c.kind].weight
     if (c.kind === 'volatile') shields += Math.max(0, 2 - (R.specs.includes('HAZMAT') ? 1 : 0))
@@ -87,7 +88,15 @@ export function planCost(set: number[], route: number) {
       extraPower += 3
     }
     if (c.kind === 'living') crew += R.specs.includes('VET') ? 1 : 2
+    if (c.need && !R.specs.includes(c.need)) missingSpecs.add(c.need)
   })
+  // specialists this plan still has to sign: their fee, their wages, and the
+  // detour to the home-port hiring hall when we are not already there
+  missingSpecs.forEach((sp) => {
+    buy += HIRES[sp as 'VET' | 'HAZMAT'].price
+    crew += 1
+  })
+  const detour = missingSpecs.size && R.at !== 0 ? R.D![R.at][0] : 0
   const needSh = Math.max(0, shields - (have.SHD || 0)),
     needCr = Math.max(0, cryo - (have.CRY || 0))
   buy += needSh * MOD.SHD.price + needCr * MOD.CRY.price
@@ -122,7 +131,7 @@ export function planCost(set: number[], route: number) {
   const mass = bays - (have.THR || 0)
   const over = Math.ceil(Math.max(0, mass - cap) / 2)
   const lanes = Math.max(1, Math.round(route / 3))
-  const fuel = route + over * lanes + R.warpCost
+  const fuel = route + detour + over * lanes + R.warpCost
   const price = R.medFuel
   const revenue = picked.reduce((a, c) => a + c.fee, 0)
   const wages = crew * R.wage
@@ -131,5 +140,8 @@ export function planCost(set: number[], route: number) {
 }
 
 export function floorProfit(): number {
-  return 40 + 6 * (R ? R.stage : 1)
+  // stage 1 guarantees real slack for a new hauler's mistakes;
+  // later stages keep the original tight margin
+  const stage = R ? R.stage : 1
+  return stage === 1 ? 80 : 40 + 6 * stage
 }

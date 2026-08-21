@@ -60,7 +60,9 @@ export function genStage(seed: string, stage: number, carry: Carry | null, start
 
     nodes.forEach((nd) => {
       if (nd.r === 0) {
-        nd.fuel = 4
+        // stage 1 sells cheap fuel at the home port — the opening is forgiving,
+        // the clock tightens from stage 2 on
+        nd.fuel = stage === 1 ? 3 : 4
         nd.port = true
         nd.rate = 0.5 + rng() * 0.15
         return

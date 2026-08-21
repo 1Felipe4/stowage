@@ -70,7 +70,7 @@ export const MOD: Record<ModCode, ModDef> = {
 export const KINDS: Record<KindId, KindDef> = {
   volatile: {
     id: 'volatile', name: 'Volatile compound', pay: 1.45, weight: 1, crew: 0, support: 'SHD',
-    rule: 'Every bay touching it must hold shielding. Vacuum does not contain.'
+    rule: 'Every bay touching it must hold shielding. Empty bays do not contain — the hull wall does.'
   },
   cold: {
     id: 'cold', name: 'Cold chain crate', pay: 1.25, weight: 1, crew: 0, support: 'CRY',
@@ -82,7 +82,7 @@ export const KINDS: Record<KindId, KindDef> = {
   },
   unbraced: {
     id: 'unbraced', name: 'Unbraced mass', pay: 1.1, weight: 2, crew: 0, support: null,
-    rule: 'Two touching bays left clear to brace against. Weighs double.'
+    rule: 'Two touching bays left clear to brace against — the hull wall braces too. Weighs double.'
   },
   instrument: {
     id: 'instrument', name: 'Calibrated instrument', pay: 1.0, weight: 1, crew: 0, support: null,
