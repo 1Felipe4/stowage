@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { newRun, pickHull } from '../engine/actions'
+import { newRun, pickHull, scuttle } from '../engine/actions'
 import { LESSONS } from '../engine/teach'
 import { R, emit, ui } from '../engine/state'
 import { getScores, loadScores, subscribeScores, type Score } from '../net/scores'
@@ -14,6 +14,14 @@ function go(screen: typeof ui.screen) {
 /* ---------------- main menu ---------------- */
 export function MenuScreen() {
   const live = !!R && !R.over
+  // Ending a run has to be reachable from both layouts, so it lives here as
+  // well as under the chart — on mobile the chart tab is easy to miss.
+  const [armed, setArmed] = useState(false)
+  useEffect(() => {
+    if (!armed) return
+    const t = window.setTimeout(() => setArmed(false), 4000)
+    return () => window.clearTimeout(t)
+  }, [armed])
   const items = [
     ...(live
       ? [
@@ -46,7 +54,28 @@ export function MenuScreen() {
         go('lessons')
       }
     },
-    { icon: 'CUP', label: 'Highscores', sub: 'Five best runs on this ship', pri: false, act: () => go('scores') }
+    { icon: 'CUP', label: 'Highscores', sub: 'Five best runs on this ship', pri: false, act: () => go('scores') },
+    ...(live
+      ? [
+          {
+            icon: 'BAN',
+            label: armed ? 'Tap again to end it' : 'End this run',
+            sub: armed
+              ? 'Sinks the ship. Banks a bust and shows your card.'
+              : 'Give up, sink the ship, and bank what happened',
+            pri: false,
+            danger: true,
+            act: () => {
+              if (!armed) {
+                setArmed(true)
+                return
+              }
+              scuttle()
+              go('bridge')
+            }
+          }
+        ]
+      : [])
   ]
   return (
     <div className="screen">
@@ -60,7 +89,11 @@ export function MenuScreen() {
         </p>
         <div className="menuitems">
           {items.map((i) => (
-            <button className={'menuitem' + (i.pri ? ' pri' : '')} key={i.label} onClick={i.act}>
+            <button
+              className={'menuitem' + (i.pri ? ' pri' : '') + ('danger' in i && i.danger ? ' danger' : '') + (armed && 'danger' in i && i.danger ? ' armed' : '')}
+              key={'danger' in i && i.danger ? 'end-run' : i.label}
+              onClick={i.act}
+            >
               <Icon k={i.icon} />
               <span className="ml">
                 <span className="mlab">{i.label}</span>

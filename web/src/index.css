@@ -467,3 +467,11 @@ svg.map{display:block;width:100%;height:auto}
   .hulls .hullcard .btn{margin-top:auto}
   .solo-inner.wide{max-width:980px}
 }
+
+/* ending a run from the menu — red, and never one tap from done */
+.menuitem.danger{background:rgba(239,68,68,.06);border-color:#7F1D1D}
+.menuitem.danger .ic{color:var(--red2)}
+.menuitem.danger .mlab{color:var(--red2)}
+.menuitem.danger.armed{background:var(--red);border-color:var(--red)}
+.menuitem.danger.armed .ic,.menuitem.danger.armed .mlab{color:#1B0505}
+.menuitem.danger.armed .msub{color:rgba(0,0,0,.62)}
