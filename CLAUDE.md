@@ -38,6 +38,8 @@ can land later without re-architecting.
   on travel, auto-clears on arrival).
 - `npx tsx web/test/share.ts` — run-card facts for every ending.
 - `npx tsx web/test/heat.ts` — heat geometry, ambient scaling, feasibility at depth.
+- `npx tsx web/test/flavour.ts` — cargo goods/clients: kind-matched, unique per
+  board, deterministic per seed, and never load-bearing for rules.
 - `npx tsx web/test/screens.ts` — lesson/tutorial content, tutorial predicates
   against real state, and run-end scoring. All run headless (no DOM needed).
 
@@ -64,6 +66,14 @@ can land later without re-architecting.
 - Travel is always confirmed: chart nodes and lane cards both call `askJump()`,
   which stores a `JumpPlan` (with `why` when blocked); only `confirmJump()` moves
   the ship, and it routes through `jump()` so fuel and inspection are re-guarded.
+
+## Contract flavour
+
+`engine/flavour.ts` holds goods names per cargo kind and a list of consignors.
+`gen.ts` stamps each contract with `goods` and a board-unique `client`. This is
+cosmetic only — every rule keys off `kind`, never these strings — so it is safe
+to extend the word lists freely. Seeded from the stage rng, so a plan code always
+tells the same story.
 
 ## Heat is the escalating axis
 

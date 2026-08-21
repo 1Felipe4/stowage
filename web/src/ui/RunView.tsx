@@ -102,8 +102,10 @@ function ConfirmBurn() {
 
   const flags: { k: string; cls: string; txt: string }[] = []
   R.cargo.forEach((x) => {
-    if (x.aboard && x.to === c.to) flags.push({ k: 'COINS', cls: 'green', txt: `${x.short} signs over on arrival. Pays ${x.fee}.` })
-    if (!x.taken && !x.done && x.at === c.to) flags.push({ k: 'CARGO', cls: 'amber', txt: `${x.short} is on offer there for ${x.fee}.` })
+    const what = x.goods ? `${x.short} (${x.goods})` : x.short
+    if (x.aboard && x.to === c.to)
+      flags.push({ k: 'COINS', cls: 'green', txt: `${what} signs over${x.client ? ' to ' + x.client : ''} on arrival. Pays ${x.fee}.` })
+    if (!x.taken && !x.done && x.at === c.to) flags.push({ k: 'CARGO', cls: 'amber', txt: `${what} is on offer there for ${x.fee}.` })
   })
   const wantThere = d.stock.filter((k) => whyMod(k).need > 0)
   if (wantThere.length) flags.push({ k: 'BAG', cls: 'amber', txt: `${wantThere.map((k) => MOD[k].name).join(', ')} in stock there.` })
@@ -318,7 +320,16 @@ export function RunView() {
               <i className={'tagpill ' + state.cls}>{state.t}</i>
             </div>
             <div className="cd">
-              {c.name} · {c.rule}
+              {c.goods ? (
+                <>
+                  <b className="goods">{c.goods}</b>
+                  {c.client ? <> for {c.client}</> : null} · {c.name.toLowerCase()}
+                </>
+              ) : (
+                c.name
+              )}
+              {' · '}
+              {c.rule}
               {costs.length ? <b style={{ color: 'var(--red2)' }}> {costs.join(', ')}.</b> : null}
             </div>
           </div>
@@ -687,9 +698,13 @@ export function RunView() {
             {selMod && (
               <div className="selcard">
                 <div style={{ minWidth: 0 }}>
-                  <div className="nm">{selMod.name}</div>
+                  <div className="nm">
+                    {selMod.cargo?.goods ? `${selMod.cargo.short} · ${selMod.cargo.goods}` : selMod.name}
+                  </div>
                   <div className="ds">
-                    {selMod.cargo ? selMod.cargo.rule : selMod.blurb}
+                    {selMod.cargo
+                      ? (selMod.cargo.client ? `Consigned by ${selMod.cargo.client}. ` : '') + selMod.cargo.rule
+                      : selMod.blurb}
                     {!selMod.cargo ? ` Paid ${MOD[selMod.code as ModCode].price} new.` : ''}
                   </div>
                 </div>

@@ -2,6 +2,7 @@ import { HIRES, KINDS, MOD, TILES } from './data'
 import { fits, fuelCap } from './core'
 import { buildAdj, dijkstra } from './map'
 import { mulberry32, seedNum } from './rng'
+import { CLIENTS, GOODS, pick } from './flavour'
 import { floorProfit, solveStage } from './solver'
 import { R, setR } from './state'
 import type { Cargo, Cell, Edge, GameState, Hull, KindId, ModCode, NodeT, Spec } from './types'
@@ -89,13 +90,20 @@ export function genStage(seed: string, stage: number, carry: Carry | null, start
     const kinds = Object.keys(KINDS) as KindId[]
     const names = ['CRATE A', 'CRATE B', 'CRATE C', 'CRATE D', 'CRATE E']
     const cargo: Cargo[] = []
+    const usedClients = new Set<string>()
     for (let i = 0; i < nC; i++) {
       const k = KINDS[kinds[Math.floor(rng() * kinds.length)]]
       const p = 1 + Math.floor(rng() * (nodes.length - 1))
       let d = 1 + Math.floor(rng() * (nodes.length - 1))
       while (d === p) d = 1 + Math.floor(rng() * (nodes.length - 1))
+      // flavour: what it holds and who is paying. Two contracts on one board
+      // never share a consignor, so the manifest reads like real trade.
+      let client = pick(CLIENTS, rng)
+      for (let t = 0; t < 8 && usedClients.has(client); t++) client = pick(CLIENTS, rng)
+      usedClients.add(client)
       cargo.push({
-        i, kind: k.id, name: k.name, short: names[i], rule: k.rule, need: k.need || null,
+        i, kind: k.id, name: k.name, goods: pick(GOODS[k.id], rng), client,
+        short: names[i], rule: k.rule, need: k.need || null,
         support: k.support, crew: k.crew, at: p, to: d, taken: false, aboard: false, done: false, fee: 0
       })
     }

@@ -51,7 +51,12 @@ export interface Hull {
 export interface Cargo {
   i: number
   kind: KindId
+  /** the cargo type's label, e.g. "Livestock pen" — rules read `kind`, not this */
   name: string
+  /** what it actually holds, e.g. "dairy heifers" (flavour only) */
+  goods?: string
+  /** who is paying for the run (flavour only) */
+  client?: string
   short: string
   rule: string
   need: Spec | null

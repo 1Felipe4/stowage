@@ -180,8 +180,10 @@ export function orders(): Orders {
   if (open.length && R.grid.includes(null))
     return {
       k: 'do',
-      t: `${open[0].short} is on offer here.`,
-      s: `${coord(R.nodes[open[0].to])}, pays ${open[0].fee}. ${open[0].rule}`,
+      t: open[0].goods ? `${open[0].goods} on offer here.` : `${open[0].short} is on offer here.`,
+      s:
+        `${open[0].short} to ${coord(R.nodes[open[0].to])}` +
+        `${open[0].client ? ' for ' + open[0].client : ''}, pays ${open[0].fee}. ${open[0].rule}`,
       act: { kind: 'port', portTab: 'contracts' },
       cta: 'Open contracts'
     }
@@ -212,7 +214,7 @@ export function orders(): Orders {
     const g = goTo(c.to)
     return {
       k: 'go',
-      t: `Run ${c.short} to ${coord(R.nodes[c.to])}.`,
+      t: `Run ${c.goods ?? c.short} to ${coord(R.nodes[c.to])}.`,
       s: `${carrying.length} aboard, ${R.D![R.at][c.to]} fuel of lanes away. Profit so far ${R.credits - R.opening}.`,
       ...g
     }
@@ -233,7 +235,7 @@ export function orders(): Orders {
     const g = goTo(c.at)
     return {
       k: 'go',
-      t: `${c.short} is waiting at ${coord(R.nodes[c.at])}.`,
+      t: `${c.goods ?? c.short} waiting at ${coord(R.nodes[c.at])}.`,
       s: `Pays ${c.fee}, ${R.D![R.at][c.at]} fuel of lanes away. Profit so far ${R.credits - R.opening}.`,
       ...g
     }

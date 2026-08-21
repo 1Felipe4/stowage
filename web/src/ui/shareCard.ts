@@ -90,6 +90,8 @@ export interface ShareFacts {
   credits: number
   seed: string
   best?: number
+  /** the last thing delivered, named — the bit people actually retell */
+  lastRun?: string
   lines: { label: string; val: string; kind: 'up' | 'dn' | '' }[]
 }
 
@@ -97,6 +99,9 @@ export interface ShareFacts {
 export function shareFacts(): ShareFacts {
   const s = R.summary
   const cleared = R.over === 'clear'
+  const paid = R.cargo.filter((c) => c.done)
+  const last = paid[paid.length - 1]
+  const lastRun = last?.goods ? `Last run: ${last.goods}${last.client ? ' for ' + last.client : ''}` : undefined
   if (s && cleared) {
     const net = s.spend - s.wages - s.penalty
     return {
@@ -109,6 +114,7 @@ export function shareFacts(): ShareFacts {
       credits: R.credits,
       seed: R.seed,
       best: s.best,
+      lastRun,
       lines: [
         { label: 'OPENED WITH', val: String(s.opening), kind: '' },
         { label: 'REVENUE', val: `+${s.revenue}`, kind: 'up' },
@@ -128,6 +134,7 @@ export function shareFacts(): ShareFacts {
     cleared: R.cleared,
     credits: R.credits,
     seed: R.seed,
+    lastRun,
     lines: []
   }
 }
@@ -137,6 +144,7 @@ export function shareText(f: ShareFacts): string {
   const bits = [
     `STOWAGE — ${f.headline}`,
     `${f.hull} · stage ${f.stage} · ${f.cleared} cleared · ${f.credits} credits`,
+    ...(f.lastRun ? [f.lastRun] : []),
     `Plan ${f.seed}`
   ]
   return bits.join('\n')
@@ -216,7 +224,12 @@ export async function drawShareCard(): Promise<{ blob: Blob; url: string; facts:
 
   sans(ctx, 27, 500)
   ctx.fillStyle = C.mut
-  wrap(ctx, f.sub, PAD + 44, y + 202, W - PAD * 2 - 88, 34)
+  const subEnd = wrap(ctx, f.sub, PAD + 44, y + 202, W - PAD * 2 - 88, 34)
+  if (f.lastRun) {
+    mono(ctx, 20, 500)
+    ctx.fillStyle = C.mut3
+    ctx.fillText(f.lastRun.toUpperCase(), PAD + 44, Math.min(subEnd + 4, y + 224))
+  }
 
   // stat tiles
   y += 236 + 26
