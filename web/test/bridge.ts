@@ -69,5 +69,56 @@ ck('blocked burn cannot move the ship', R.at === atBefore)
 cancelJump()
 
 void capacity
-console.log(fail ? `\n${fail} FAILURES` : '\nALL PASS')
+
+/* ---- plotted course (advisory waypoint) ---- */
+import { courseInfo } from '../src/engine/course'
+import { plotCourse, dropCourse, jump } from '../src/engine/actions'
+import { fuelCap as fcap2 } from '../src/engine/core'
+
+genStage('COURSE', 1, null, HULLS[0])
+R.credits = 400
+R.fuel = Math.min(12, fcap2())
+ck('no course by default', courseInfo() === null)
+
+// pick a genuinely distant node
+const far2 = R.nodes
+  .filter(nd => nd.id !== R.at && !outEdges().some(e => e.b === nd.id))
+  .sort((a, b) => R.D![R.at][b.id] - R.D![R.at][a.id])[0]
+plotCourse(far2.id)
+let crs = courseInfo()!
+ck('course plots to a far node', !!crs && crs.target === far2.id, JSON.stringify(crs && { t: crs.target, hops: crs.hops.length }))
+ck('course has multiple hops', crs.hops.length >= 2, `hops=${crs.hops.length}`)
+ck('next hop is adjacent', outEdges().some(e => e.b === crs.nextHop), `next=${crs.nextHop}`)
+ck('course ends at the target', crs.hops[crs.hops.length - 1] === far2.id)
+ck('route length matches dijkstra', crs.fuel - surcharge() * crs.hops.length === R.D![R.at][far2.id],
+   `walked=${crs.fuel - surcharge() * crs.hops.length} dijkstra=${R.D![R.at][far2.id]}`)
+ck('course highlights its own edges', crs.edges.size === crs.hops.length)
+
+// following the course shortens it by exactly one hop
+const firstHop = crs.nextHop!
+const e2 = outEdges().find(e => e.b === firstHop)!
+const hopsBefore = crs.hops.length
+if (R.fuel >= e2.cost + surcharge() && evaluate(R.grid).ok) {
+  jump(e2)
+  crs = courseInfo()!
+  ck('following the course advances it', !!crs && crs.hops.length === hopsBefore - 1, `hops=${crs?.hops.length} was ${hopsBefore}`)
+  ck('course survives travel', crs.target === far2.id)
+} else console.log('SKIP course-follow (could not afford the first hop)')
+
+dropCourse()
+ck('course can be cleared', courseInfo() === null)
+
+// arriving at the target auto-clears
+genStage('COURSE2', 1, null, HULLS[0])
+R.credits = 400
+R.fuel = Math.min(12, fcap2())
+const nb2 = outEdges()[0]
+plotCourse(nb2.b)
+ck('adjacent course is one hop', courseInfo()?.hops.length === 1)
+if (R.fuel >= nb2.cost + surcharge() && evaluate(R.grid).ok) {
+  jump(nb2)
+  ck('arriving clears the course', courseInfo() === null && R.at === nb2.b)
+}
+
+console.log(fail ? `\n${fail} FAILURES (course)` : '\nCOURSE: ALL PASS')
 process.exit(fail ? 1 : 0)

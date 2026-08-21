@@ -258,6 +258,24 @@ button:focus-visible,.cell:focus-visible{outline:2px solid var(--blue3);outline-
 .peek .pr .ds{font-size:11.5px;color:var(--mut2);line-height:1.35;margin-top:1px}
 .peek .pnote{padding:7px 10px;font-family:var(--mono);font-size:9px;color:var(--co);letter-spacing:.06em;border-top:1px solid var(--line4)}
 
+/* plotted course */
+.coursebar{display:flex;gap:10px;align-items:flex-start;background:rgba(245,158,11,.07);
+ border:1px solid rgba(245,158,11,.35);border-radius:12px;padding:10px 12px;margin-top:10px}
+.coursebar .ic{width:16px;height:16px;flex:0 0 16px;margin-top:2px;color:var(--amber)}
+.coursebar .ct{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--amber)}
+.coursebar .cs{font-size:12.5px;color:var(--ink3);line-height:1.4;margin-top:2px}
+.coursebar .cs b{color:var(--amber2)}
+.coursebar .xbtn{margin-left:auto;flex-shrink:0}
+.lane.next{border-color:var(--amber);background:rgba(245,158,11,.05)}
+.lane .nexttag{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;padding:2px 6px;border-radius:9999px;
+ border:1px solid var(--amber);color:var(--amber);margin-left:8px;vertical-align:middle;font-weight:600}
+.lane .lc.withtag{display:inline-flex;align-items:center}
+
+.xbtn{border:0;background:transparent;padding:4px;cursor:pointer;color:var(--mut3);display:inline-flex;
+ align-items:center;justify-content:center;border-radius:6px}
+.xbtn:hover{color:var(--ink)}
+.xbtn .ic{width:14px;height:14px}
+
 .stuckcard{background:var(--card);border:1px solid var(--red);border-radius:12px;padding:11px 12px;margin-top:10px;
  display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
 .stuckcard .nm{font-size:13px;font-weight:700;color:var(--red2)}
@@ -275,6 +293,9 @@ button:focus-visible,.cell:focus-visible{outline:2px solid var(--blue3);outline-
 svg.map{display:block;width:100%;height:auto}
 .map .ndg{cursor:pointer}
 .map .nd.openring{stroke:rgba(96,165,250,.55);fill:none;stroke-width:1;stroke-dasharray:2 4}
+.map .ln.course{stroke:var(--amber);stroke-width:2.4}
+.map .nd.target{stroke:var(--amber);fill:none;stroke-width:2}
+.map .nd.nexthop{stroke:var(--amber2);fill:none;stroke-width:1.6;stroke-dasharray:4 3}
 .map .ln{stroke:#182437;stroke-width:1.2;fill:none}
 .map .ln.open{stroke:var(--pri);stroke-width:2}
 .map .ln.done{stroke:rgba(16,185,129,.5);stroke-width:1.6}
@@ -291,10 +312,12 @@ svg.map{display:block;width:100%;height:auto}
 .map tspan.pt{fill:var(--amber)} .map tspan.en{fill:var(--green)} .map tspan.lt{fill:var(--purple)}
 .map text.wp{fill:var(--purple)}
 
-.abandon{margin-top:16px;display:flex;align-items:center;gap:10px;opacity:.75;padding-bottom:8px}
-.abandon .btn{font-size:9.5px;padding:7px 9px;color:var(--mut3)}
-.abandon .btn.danger{color:var(--red2);opacity:1}
-.abandon span{font-family:var(--mono);font-size:9px;color:var(--co);letter-spacing:.05em}
+/* Scuttle is a rare word, so the control is red from the start — the colour
+   carries the meaning even if the verb does not. */
+.abandon{margin-top:16px;display:flex;align-items:flex-start;gap:10px;padding-bottom:8px}
+.abandon .btn{font-size:9.5px;padding:7px 9px;border-color:#7F1D1D;color:var(--red2);background:rgba(239,68,68,.06)}
+.abandon .btn.armed{background:var(--red);border-color:var(--red);color:#1B0505;font-weight:700}
+.abandon span{font-family:var(--mono);font-size:9px;color:var(--mut3);letter-spacing:.05em;line-height:1.5}
 .log{font-family:var(--mono);font-size:10px;color:var(--co);margin-top:10px;line-height:1.7;padding-bottom:12px}
 
 /* ---------- burn confirmation ---------- */
@@ -323,6 +346,25 @@ svg.map{display:block;width:100%;height:auto}
 .cbtns{display:flex;gap:8px;margin-top:15px}
 .cbtns .btn{padding:11px 14px;border-radius:10px;font-size:11px}
 .cbtns .go{flex:1;text-align:center}
+
+/* ---------- share sheet ---------- */
+.sharecard{width:100%;max-width:440px;max-height:calc(100dvh - 44px);overflow-y:auto;background:#0B1320;
+ border:1px solid #24344B;border-radius:18px;padding:16px;box-shadow:0 30px 60px -20px rgba(0,0,0,.9)}
+.sharecard .kick{display:flex;align-items:center;gap:7px}
+.sharecard .kick .ic{width:15px;height:15px;color:var(--blue)}
+.sharecard .kick>span{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;font-weight:600;color:var(--blue)}
+.sharecard .kick .xbtn{margin-left:auto}
+.preview{margin-top:12px;border:1px solid var(--line2);border-radius:12px;overflow:hidden;background:var(--bg);
+ min-height:180px;display:flex;align-items:center;justify-content:center}
+.preview img{display:block;width:100%;height:auto}
+.pwait,.perr{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--mut3);padding:40px 16px;text-align:center}
+.perr{color:var(--red2);letter-spacing:.04em;font-size:11.5px;line-height:1.5}
+.sbtns{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}
+.sbtns .btn{flex:1 1 auto;min-width:92px;text-align:center;padding:11px 12px;border-radius:10px;font-size:11px}
+.snote{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;color:var(--green2);margin-top:10px}
+.sharebtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-color:rgba(96,165,250,.45);
+ color:var(--blue2);background:rgba(37,99,235,.1)}
+.sharebtn .ic{width:14px;height:14px}
 
 /* ---------- hull pick / end ---------- */
 .hullcard{background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:14px;margin-top:12px}

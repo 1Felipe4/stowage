@@ -1,9 +1,13 @@
+import { useState } from 'react'
 import { newRun, pressOn, retire } from '../engine/actions'
 import { R } from '../engine/state'
+import { Icon } from './Icon'
+import { ShareSheet } from './ShareSheet'
 
 export function EndView() {
   const s = R.summary,
     clear = R.over === 'clear'
+  const [sharing, setSharing] = useState(false)
   return (
     <>
       <div className={'directive ' + (clear ? 'go' : 'bad')}>
@@ -48,7 +52,8 @@ export function EndView() {
                 </div>
               </div>
               <div className="sub">
-                BEST POSSIBLE HERE WAS {s.best} · {R.cleared} STAGE{R.cleared === 1 ? '' : 'S'} CLEARED
+                {R.hull.name.toUpperCase()} · BEST POSSIBLE HERE WAS {s.best} · {R.cleared} STAGE
+                {R.cleared === 1 ? '' : 'S'} CLEARED
               </div>
             </div>
           ) : (
@@ -56,13 +61,18 @@ export function EndView() {
               <h3>BUST</h3>
               <p>{R.overWhy}.</p>
               <div className="sub">
-                {R.cleared} STAGE{R.cleared === 1 ? '' : 'S'} CLEARED · {R.credits} CREDITS LEFT
+                {R.hull.name.toUpperCase()} · {R.cleared} STAGE{R.cleared === 1 ? '' : 'S'} CLEARED · {R.credits} CREDITS LEFT
               </div>
             </div>
           )}
+          <button className="btn wide sharebtn" style={{ marginTop: 12 }} onClick={() => setSharing(true)}>
+            <Icon k="SHARE" />
+            SHARE THIS RUN
+          </button>
+
           {clear ? (
             <>
-              <button className="btn wide pri" style={{ marginTop: 12 }} onClick={pressOn}>
+              <button className="btn wide pri" style={{ marginTop: 8 }} onClick={pressOn}>
                 PRESS ON TO STAGE {R.stage + 1}
               </button>
               <button className="btn wide" style={{ marginTop: 8 }} onClick={retire}>
@@ -70,12 +80,13 @@ export function EndView() {
               </button>
             </>
           ) : (
-            <button className="btn wide pri" style={{ marginTop: 12 }} onClick={newRun}>
+            <button className="btn wide pri" style={{ marginTop: 8 }} onClick={newRun}>
               NEW HAULER
             </button>
           )}
         </div>
       </div>
+      {sharing && <ShareSheet onClose={() => setSharing(false)} />}
     </>
   )
 }

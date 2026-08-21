@@ -1,6 +1,7 @@
 import { W } from '../engine/data'
 import { coord, outEdges } from '../engine/actions'
-import { R } from '../engine/state'
+import { courseInfo, edgeKey } from '../engine/course'
+import { R, ui } from '../engine/state'
 
 /* The sector chart, kept as the prototype's string builder — every value
    in it is engine-generated, no user input ever reaches this markup. */
@@ -14,12 +15,15 @@ export function chartSvg(): string {
     y: 28 + n.r * RW
   })
   const open = outEdges().map((e) => e.b)
+  const course = courseInfo()
   let s = `<svg class="map" viewBox="0 0 ${wide + padX * 2} ${28 + (R.rowCount - 1) * RW + 28}">`
   R.edges.forEach((e) => {
     const a = pos(R.nodes[e.a]),
       b = pos(R.nodes[e.b])
     const seen = R.visited.includes(e.a) && R.visited.includes(e.b)
-    s += `<line class="ln ${e.a === R.at || e.b === R.at ? 'open' : seen ? 'done' : ''}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`
+    const onCourse = course?.edges.has(edgeKey(e.a, e.b))
+    const cls = onCourse ? 'course' : e.a === R.at || e.b === R.at ? 'open' : seen ? 'done' : ''
+    s += `<line class="ln ${cls}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`
   })
   R.nodes.forEach((n) => {
     const p = pos(n),
@@ -31,6 +35,8 @@ export function chartSvg(): string {
     // whole node is a tap target — RunView delegates clicks via data-nd
     s += `<g class="ndg" data-nd="${n.id}">`
     s += `<circle cx="${p.x}" cy="${p.y}" r="20" fill="transparent"/>`
+    if (ui.course === n.id) s += `<circle class="nd target" cx="${p.x}" cy="${p.y}" r="18"/>`
+    if (course?.nextHop === n.id) s += `<circle class="nd nexthop" cx="${p.x}" cy="${p.y}" r="15"/>`
     if (isOpen && !me) s += `<circle class="nd openring" cx="${p.x}" cy="${p.y}" r="16"/>`
     if (n.warp) s += `<circle class="nd warpring" cx="${p.x}" cy="${p.y}" r="15"/>`
     if (carry.length || later.length) s += `<circle class="nd drop ${carry.length ? 'live' : ''}" cx="${p.x}" cy="${p.y}" r="13"/>`

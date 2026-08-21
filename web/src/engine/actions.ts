@@ -6,6 +6,7 @@ import { R, emit, setR, ui } from './state'
 import { HULLS } from './data'
 import type { Edge, GameState, HireId, ModCode, NodeT } from './types'
 import { clearRemoteSave, scheduleSave } from '../net/saves'
+import { clearCourse, courseArrived, setCourse } from './course'
 
 export function coord(n: NodeT): string {
   return 'ABCDEFGHIJ'[n.r] + (n.c + 1)
@@ -105,6 +106,7 @@ export function jump(e: Edge) {
   ui.tab = 'port' // arriving somewhere new — show what the rock offers
   ui.portTab = 'market'
   ui.confirm = null
+  courseArrived()
   rollEvent()
   say(`Burned ${cost} to ${coord(here())}.`)
   dropOff()
@@ -320,6 +322,8 @@ export function pickHull(i: number) {
   ui.view = 'run'
   ui.sel = null
   ui.focus = []
+  ui.tab = 'deck'
+  clearCourse() // node ids belong to the old sector
   touch()
 }
 
@@ -328,6 +332,9 @@ export function pressOn() {
   genStage(makeSeed(), R.stage + 1, carry)
   ui.sel = null
   ui.focus = []
+  ui.tab = 'deck'
+  ui.confirm = null
+  clearCourse() // a new sector — the old course means nothing
   touch()
 }
 
@@ -340,6 +347,8 @@ export function retire() {
 
 export function newRun() {
   ui.view = 'hull'
+  ui.confirm = null
+  clearCourse()
   setR(null)
   clearRemoteSave()
   emit()
@@ -403,6 +412,19 @@ export function askJump(to: number) {
 
 export function cancelJump() {
   ui.confirm = null
+  emit()
+}
+
+/** Plot a multi-hop course to a far node and close the confirmation. */
+export function plotCourse(to: number) {
+  setCourse(to)
+  ui.confirm = null
+  ui.tab = 'lanes' // the next hop is what you act on now
+  emit()
+}
+
+export function dropCourse() {
+  clearCourse()
   emit()
 }
 

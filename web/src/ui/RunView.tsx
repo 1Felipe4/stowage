@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  accept, askJump, buyFuel, buyMod, callIt, cancelJump, confirmJump, coord, doWarp, here, hire, jettison, outEdges,
-  payOff, scuttle, sellMod, sellRate, sellValue, shipOK, stuckReason, tapBay, tapHold, toggleFocus
+  accept, askJump, buyFuel, buyMod, callIt, cancelJump, confirmJump, coord, doWarp, dropCourse, here, hire, jettison,
+  outEdges, payOff, plotCourse, scuttle, sellMod, sellRate, sellValue, shipOK, stuckReason, tapBay, tapHold, toggleFocus
 } from '../engine/actions'
 import { coverage, evaluate, fuelCap, massOf, modOf, souls, surcharge } from '../engine/core'
+import { courseInfo } from '../engine/course'
 import { HIRES, KINDS, MOD, TILES, bayName } from '../engine/data'
 import { orders, whyHire, whyMod, type Why } from '../engine/guidance'
 import { R, emit, ui, type PortTab, type Tab } from '../engine/state'
@@ -71,10 +72,14 @@ function ScuttleButton() {
   }, [armed])
   return (
     <div className="abandon">
-      <button className={'btn' + (armed ? ' danger' : '')} onClick={() => (armed ? scuttle() : setArmed(true))}>
-        {armed ? 'TAP AGAIN — SINK THE RUN' : 'SCUTTLE SHIP'}
+      <button className={'btn' + (armed ? ' armed' : '')} onClick={() => (armed ? scuttle() : setArmed(true))}>
+        {armed ? 'TAP AGAIN — END THE RUN' : 'SCUTTLE SHIP · END RUN'}
       </button>
-      <span>{armed ? 'Ends the run as a bust.' : 'If you have truly worked yourself into a corner.'}</span>
+      <span>
+        {armed
+          ? 'Sinks the ship. The run ends as a bust.'
+          : 'Give up and sink the ship — only if you have truly worked yourself into a corner.'}
+      </span>
     </div>
   )
 }
@@ -84,6 +89,9 @@ function ScuttleButton() {
 function ConfirmBurn() {
   const c = ui.confirm!
   const d = R.nodes[c.to]
+  // a far node cannot be burned to in one hop, but it can be plotted
+  const far = !outEdges().some((e) => e.b === c.to)
+  const plot = far ? courseInfo(c.to) : null
   const what: string[] = []
   if (d.port) what.push(`Yard, ${d.stock.length} lines`)
   if (d.hires.length) what.push('hiring hall')
@@ -143,6 +151,11 @@ function ConfirmBurn() {
               Burn {c.cost} and go
             </button>
           )}
+          {c.why && plot && (
+            <button className="btn want go" onClick={() => plotCourse(c.to)}>
+              Set course · {plot.hops.length} hops, {plot.fuel} fuel
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -167,6 +180,7 @@ export function RunView() {
   const mass = massOf()
   const overMass = Math.max(0, mass - cov.capM)
   const stowedBays = R.grid.filter(Boolean).length
+  const course = courseInfo()
   const crewLine = cov.hands
     ? `${cov.hands} hand${cov.hands > 1 ? 's' : ''} run${cov.hands > 1 ? '' : 's'} ${cov.capM} mass · ` +
       (cov.idle.length ? `${stowedBays - cov.idle.length} bays active, ${cov.idle.length} with no hand` : 'every stowed bay covered')
@@ -701,6 +715,27 @@ export function RunView() {
           <div className={'navsec' + (ui.tab === 'lanes' ? ' on' : '')}>
             <div className="nav-body">
               <div className="sec-h">LANES OUT OF {coord(n)}</div>
+              {course && (
+                <div className="coursebar">
+                  <Icon k="FLAG" />
+                  <div style={{ minWidth: 0 }}>
+                    <div className="ct">COURSE SET</div>
+                    <div className="cs">
+                      Making for <b>{coord(R.nodes[course.target])}</b> — {course.hops.length} hop
+                      {course.hops.length > 1 ? 's' : ''}, {course.fuel} fuel.
+                      {course.nextHop !== null ? (
+                        <>
+                          {' '}
+                          Next burn: <b>{coord(R.nodes[course.nextHop])}</b>.
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
+                  <button className="xbtn" onClick={dropCourse} aria-label="Clear course" title="Clear course">
+                    <Icon k="X" />
+                  </button>
+                </div>
+              )}
               <div className="lanecards">
                 {n.warp && (
                   <div className="lane warp">
@@ -731,8 +766,13 @@ export function RunView() {
                   </div>
                 )}
 
-                {outEdges().map((e) => {
+                {/* the next hop of a plotted course sorts first and stays lit */}
+                {outEdges()
+                  .slice()
+                  .sort((a, b) => (a.b === course?.nextHop ? -1 : b.b === course?.nextHop ? 1 : 0))
+                  .map((e) => {
                   const d = R.nodes[e.b]
+                  const isNext = course?.nextHop === e.b
                   const cost = e.cost + sur
                   const why = !res.ok ? 'DECK FAILS INSPECTION' : R.fuel < cost ? `NEED ${cost} FUEL` : null
                   const what: string[] = []
@@ -784,10 +824,13 @@ export function RunView() {
                     })
                   ]
                   return (
-                    <div className={'lane' + (why ? ' blocked' : '')} key={'lane' + e.b}>
+                    <div className={'lane' + (isNext ? ' next' : '') + (why ? ' blocked' : '')} key={'lane' + e.b}>
                       <div className="lh">
                         <div>
-                          <div className="lc">{coord(d)}</div>
+                          <div className="lc withtag">
+                            {coord(d)}
+                            {isNext ? <i className="nexttag">NEXT ON COURSE</i> : null}
+                          </div>
                           <div className="lw">{what.join(' · ')}</div>
                         </div>
                         <div className="lr">
@@ -818,7 +861,7 @@ export function RunView() {
                       </button>
                     </div>
                   )
-                })}
+                  })}
               </div>
 
               {stuckWhy && (
@@ -857,7 +900,10 @@ export function RunView() {
                 <span className="lt">→ drop, not yet taken</span>
                 <span className="wp">lane open now</span>
               </div>
-              <div className="chart-hint">Tap any node to plot a burn. Nothing moves until you confirm.</div>
+              <div className="chart-hint">
+                Tap a neighbouring node to plot a burn, or a far one to set a course — the lane to take next stays lit.
+                Nothing moves until you confirm.
+              </div>
               <ScuttleButton />
               {R.log.length > 0 && (
                 <div className="log">

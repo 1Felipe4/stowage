@@ -31,9 +31,19 @@ export interface UiState {
   tab: Tab
   portTab: PortTab
   confirm: JumpPlan | null
+  /** plotted destination node id — advisory course, see engine/course.ts */
+  course: number | null
 }
 
-export const ui: UiState = { view: 'boot', sel: null, focus: [], tab: 'deck', portTab: 'market', confirm: null }
+export const ui: UiState = {
+  view: 'boot',
+  sel: null,
+  focus: [],
+  tab: 'deck',
+  portTab: 'market',
+  confirm: null,
+  course: null
+}
 
 let version = 0
 const subs = new Set<() => void>()
