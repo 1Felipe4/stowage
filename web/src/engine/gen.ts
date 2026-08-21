@@ -14,6 +14,7 @@ export interface Carry {
   credits: number
   cleared: number
   hull: Hull
+  delivered: number
 }
 
 export function genStage(seed: string, stage: number, carry: Carry | null, startHull?: Hull, depth = 0): GameState {
@@ -110,7 +111,8 @@ export function genStage(seed: string, stage: number, carry: Carry | null, start
       specs: carry ? carry.specs.slice() : (hull.crew.filter((c) => HIRES[c].spec).map((c) => HIRES[c].spec) as Spec[]),
       fuel: 0, credits: carry ? carry.credits : 0, at: 0, visited: [0], log: [], over: null, event: null,
       accepted: [], opening: 0, revenue: 0, spend: 0,
-      wage: 16 + 2 * (stage - 1), warpCost: 4 + (stage - 1), margin: 55, medFuel: 5
+      wage: 16 + 2 * (stage - 1), warpCost: 4 + (stage - 1), margin: 55, medFuel: 5,
+      delivered: carry ? carry.delivered : 0
     })
     if (!carry) {
       // lay the starting hull out properly

@@ -54,16 +54,54 @@ app.put('/api/save', async (req, res) => {
   const token = bearer(req)
   if (!token) return res.status(401).json({ error: 'no token' })
   const file = fileFor(token)
+  let prev: Record<string, unknown>
   try {
-    await fs.access(file)
+    prev = JSON.parse(await fs.readFile(file, 'utf8'))
   } catch {
     return res.status(404).json({ error: 'unknown session' })
   }
   const save = req.body?.save
   if (save !== null && typeof save !== 'object') return res.status(400).json({ error: 'bad save' })
-  const rec = { updatedAt: Date.now(), save }
+  // merge, never replace: the record also holds the highscore board
+  const rec = { ...prev, updatedAt: Date.now(), save }
   await fs.writeFile(file, JSON.stringify(rec))
   res.json({ ok: true, updatedAt: rec.updatedAt })
+})
+
+/* Highscores live beside the save, under the same session token. Kept to the
+   top five so a bad actor cannot grow the file without bound. */
+const KEEP = 5
+
+app.get('/api/scores', async (req, res) => {
+  const token = bearer(req)
+  if (!token) return res.status(401).json({ error: 'no token' })
+  try {
+    const rec = JSON.parse(await fs.readFile(fileFor(token), 'utf8'))
+    res.json({ scores: Array.isArray(rec.scores) ? rec.scores : [] })
+  } catch {
+    res.status(404).json({ error: 'unknown session' })
+  }
+})
+
+app.put('/api/scores', async (req, res) => {
+  const token = bearer(req)
+  if (!token) return res.status(401).json({ error: 'no token' })
+  const file = fileFor(token)
+  let rec: Record<string, unknown>
+  try {
+    rec = JSON.parse(await fs.readFile(file, 'utf8'))
+  } catch {
+    return res.status(404).json({ error: 'unknown session' })
+  }
+  const list = req.body?.scores
+  if (!Array.isArray(list)) return res.status(400).json({ error: 'bad scores' })
+  const scores = list
+    .filter((s) => s && typeof s === 'object' && typeof s.credits === 'number')
+    .slice(0, 50)
+    .sort((a, b) => b.credits - a.credits)
+    .slice(0, KEEP)
+  await fs.writeFile(file, JSON.stringify({ ...rec, scores, updatedAt: Date.now() }))
+  res.json({ ok: true, kept: scores.length })
 })
 
 const PORT = Number(process.env.PORT) || 3001

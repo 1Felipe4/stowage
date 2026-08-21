@@ -6,6 +6,7 @@ import { R, emit, setR, ui } from './state'
 import { HULLS } from './data'
 import type { Edge, GameState, HireId, ModCode, NodeT } from './types'
 import { clearRemoteSave, scheduleSave } from '../net/saves'
+import { recordScore } from '../net/scores'
 import { clearCourse, courseArrived, setCourse } from './course'
 
 export function coord(n: NodeT): string {
@@ -123,6 +124,7 @@ function dropOff() {
     R.grid[b] = null
     c.aboard = false
     c.done = true
+    R.delivered++
     paid += c.fee
     say(`${c.short} signed over for ${c.fee}.`)
   })
@@ -264,8 +266,27 @@ export function doWarp() {
   }
   R.over = R.credits < 0 ? 'bust' : 'clear'
   if (R.over === 'clear') R.cleared++
-  else R.overWhy = 'You could not cover the wage bill'
+  else {
+    R.overWhy = 'You could not cover the wage bill'
+    finishRun('bust')
+  }
   touch()
+}
+
+/** One place where a run is declared over, so every ending is scored. */
+function finishRun(kind: 'retired' | 'bust') {
+  if (R.endKind) return
+  R.endKind = kind
+  recordScore({
+    credits: R.credits,
+    delivered: R.delivered,
+    stage: R.stage,
+    cleared: R.cleared,
+    hull: R.hull.name,
+    kind,
+    why: R.overWhy || '',
+    seed: R.seed
+  })
 }
 
 /** Why this run can no longer move, or null if it still can. Covers the two
@@ -302,6 +323,7 @@ export function callIt() {
   R.over = 'bust'
   R.overWhy = 'Stranded with nothing left to sell'
   R.summary = null
+  finishRun('bust')
   touch()
 }
 
@@ -310,6 +332,7 @@ export function scuttle() {
   R.over = 'bust'
   R.overWhy = `You scuttled the ship at ${coord(here())}`
   R.summary = null
+  finishRun('bust')
   touch()
 }
 
@@ -328,7 +351,10 @@ export function pickHull(i: number) {
 }
 
 export function pressOn() {
-  const carry = { grid: R.grid, crew: R.crew, specs: R.specs, fuel: R.fuel, credits: R.credits, cleared: R.cleared, hull: R.hull }
+  const carry = {
+    grid: R.grid, crew: R.crew, specs: R.specs, fuel: R.fuel,
+    credits: R.credits, cleared: R.cleared, hull: R.hull, delivered: R.delivered
+  }
   genStage(makeSeed(), R.stage + 1, carry)
   ui.sel = null
   ui.focus = []
@@ -342,6 +368,7 @@ export function retire() {
   R.over = 'bust'
   R.overWhy = `You retired on ${R.credits} after ${R.cleared} stages`
   R.summary = null
+  finishRun('retired')
   touch()
 }
 

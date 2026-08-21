@@ -28,6 +28,53 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
 .solo-inner{max-width:520px;margin:0 auto}
 .boot{padding:80px 0;text-align:center;font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--mut3)}
 
+/* ---------- full screens: menu, scores, lessons ---------- */
+.screen{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;
+ justify-content:center;padding:26px 20px calc(env(safe-area-inset-bottom) + 26px);overflow-y:auto}
+.menuwrap{display:flex;flex-direction:column;align-items:center;text-align:center;gap:9px;max-width:520px;width:100%}
+.eyebrow{font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--mut4)}
+.wordmark{font-size:clamp(44px,13vw,72px);font-weight:800;letter-spacing:-.03em;line-height:1}
+.wordmark span{color:var(--blue)}
+.tagline{font-size:13px;color:var(--mut2);line-height:1.55;max-width:400px;margin:0;text-wrap:pretty}
+.menuitems{display:flex;flex-direction:column;gap:8px;margin-top:22px;width:100%;max-width:344px}
+.menuitem{display:flex;align-items:center;gap:11px;padding:13px 14px;border-radius:14px;cursor:pointer;
+ transition:all 150ms;background:var(--card);border:1px solid #24344B;text-align:left}
+.menuitem.pri{background:var(--pri);border-color:var(--pri)}
+.menuitem .ic{width:19px;height:19px;flex:0 0 19px;color:var(--blue)}
+.menuitem.pri .ic{color:#fff}
+.menuitem .ml{min-width:0;flex:1}
+.menuitem .mlab{display:block;font-size:14px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+.menuitem.pri .mlab{color:#fff}
+.menuitem .msub{display:block;font-size:11.5px;line-height:1.35;margin-top:2px;color:var(--mut2)}
+.menuitem.pri .msub{color:rgba(255,255,255,.72)}
+.menuitem>.ic:last-child{width:15px;height:15px;flex:0 0 15px;color:var(--mut4)}
+.menuitem.pri>.ic:last-child{color:rgba(255,255,255,.6)}
+.screenfoot{position:absolute;bottom:16px;left:0;right:0;text-align:center;font-family:var(--mono);
+ font-size:9px;letter-spacing:.14em;color:var(--mut5)}
+
+.sheet{width:100%;max-width:520px;background:var(--card);border:1px solid #24344B;border-radius:18px;padding:16px}
+.sheethead{display:flex;align-items:center;gap:10px}
+.sheetnote{font-size:11.5px;color:var(--mut4);line-height:1.4;margin-top:13px}
+.scorelist{display:flex;flex-direction:column;gap:6px;margin-top:15px}
+.scorerow{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--card2);
+ border:1px solid var(--line3)}
+.scorerow.top{background:rgba(245,158,11,.06);border-color:rgba(245,158,11,.3)}
+.scorerow .rank{font-family:var(--mono);font-size:11px;width:18px;flex-shrink:0;color:var(--mut4)}
+.scorerow.top .rank{color:var(--amber)}
+.scorerow .cr{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--amber)}
+.scorerow .det{font-size:11.5px;color:var(--mut2);line-height:1.35;margin-top:1px}
+.tagpill.red{border-color:var(--red2);color:var(--red2)}
+
+.lessontitle{font-size:24px;font-weight:700;letter-spacing:-.02em;margin-top:14px}
+.lessonlines{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.lline{display:flex;gap:9px;align-items:flex-start}
+.lline .ic{width:15px;height:15px;flex:0 0 15px;color:var(--blue);margin-top:2px}
+.lline span{font-size:13px;color:#B6C2D2;line-height:1.5;text-wrap:pretty}
+.lessonfoot{display:flex;align-items:center;gap:7px;margin-top:22px}
+.dots{display:flex;gap:5px;align-items:center}
+.dot{width:6px;height:6px;border-radius:9999px;background:var(--line2);transition:width 150ms}
+.dot.on{width:18px;background:var(--pri)}
+
 /* ---------- hud ---------- */
 .hud{display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top) + 12px) 14px 10px;
  border-bottom:1px solid var(--line);background:var(--panel2);flex-shrink:0}
@@ -57,6 +104,13 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14p
 .directive .dt{font-size:15px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
 .directive .ds{font-size:12.5px;color:var(--mut);line-height:1.4;margin-top:2px}
 .directive .cta{display:none;flex-shrink:0}
+.directive.tut{border-left-color:var(--pri);background:rgba(37,99,235,.1)}
+.directive.tut .dt{color:var(--blue2)}
+.directive .kick{font-family:var(--mono);font-size:9px;letter-spacing:.18em;font-weight:600;color:var(--blue);margin-bottom:3px}
+.menubtn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex-shrink:0;
+ border-radius:9px;border:1px solid var(--line2);background:var(--card);color:var(--mut);cursor:pointer}
+.menubtn .ic{width:16px;height:16px}
+.pane.lit{box-shadow:inset 0 0 0 1px rgba(96,165,250,.5)}
 
 /* ---------- banners ---------- */
 .banner{display:flex;gap:9px;align-items:flex-start;margin:10px 12px 0;padding:9px 11px;border-radius:12px;

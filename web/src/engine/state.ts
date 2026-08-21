@@ -23,8 +23,16 @@ export interface JumpPlan {
   why: string | null
 }
 
+export type Screen = 'menu' | 'scores' | 'lessons' | 'bridge'
+
 export interface UiState {
   view: 'boot' | 'hull' | 'run'
+  /** which top-level screen is showing; 'bridge' is the game itself */
+  screen: Screen
+  /** index into LESSONS while the lessons screen is open */
+  lesson: number
+  /** guided-run progress, or null in free play */
+  tut: { i: number } | null
   sel: Sel | null
   focus: number[]
   /** active pane on mobile; desktop shows all three panes regardless */
@@ -37,6 +45,9 @@ export interface UiState {
 
 export const ui: UiState = {
   view: 'boot',
+  screen: 'menu',
+  lesson: 0,
+  tut: null,
   sel: null,
   focus: [],
   tab: 'deck',

@@ -167,6 +167,10 @@ export interface GameState {
   warpCost: number
   margin: number
   medFuel: number
+  /** contracts delivered across the whole run, for the score line */
+  delivered: number
+  /** how the run finished, once it has */
+  endKind?: 'retired' | 'bust'
   best?: BestPlan
   repairs?: number
   summary?: Summary | null

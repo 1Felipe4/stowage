@@ -8,6 +8,7 @@ import { courseInfo } from '../engine/course'
 import { HIRES, KINDS, MOD, TILES, bayName } from '../engine/data'
 import { orders, whyHire, whyMod, type Why } from '../engine/guidance'
 import { R, emit, ui, type PortTab, type Tab } from '../engine/state'
+import { TUT } from '../engine/teach'
 import type { Cargo, Check, ModCode } from '../engine/types'
 import { chartSvg } from './Chart'
 import { Icon } from './Icon'
@@ -193,6 +194,25 @@ export function RunView() {
     R.paid = null
   })
 
+  /* Guided run: step through TUT as each goal is met, pulling the player to
+     the pane the next step is about. Steps already satisfied are skipped. */
+  const tutStep = ui.tut && ui.tut.i < TUT.length ? TUT[ui.tut.i] : null
+  const tutDone = !!ui.tut && ui.tut.i >= TUT.length
+  useEffect(() => {
+    if (!ui.tut) return
+    let i = ui.tut.i
+    while (i < TUT.length && TUT[i].done()) i++
+    if (i !== ui.tut.i) {
+      ui.tut = { i }
+      const step = TUT[i]
+      if (step) {
+        ui.tab = step.tab
+        if (step.portTab) ui.portTab = step.portTab
+      }
+      emit()
+    }
+  })
+
   const needStock = n.stock.filter((k) => whyMod(k).need > 0)
   const shelfStock = n.stock.filter((k) => whyMod(k).need === 0)
   const hireNeeds = n.hires.filter((id) => whyHire(id).need > 0).length
@@ -341,19 +361,43 @@ export function RunView() {
 
   return (
     <>
-      <div className={'directive ' + o.k}>
+      <div className={'directive ' + (tutStep || tutDone ? 'tut' : o.k)}>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div className="dt">{o.t}</div>
-          <div className="ds">{o.s}</div>
+          {tutStep && (
+            <div className="kick">
+              TUTORIAL · STEP {ui.tut!.i + 1} OF {TUT.length}
+            </div>
+          )}
+          {tutDone && <div className="kick">TUTORIAL · DONE</div>}
+          <div className="dt">{tutStep ? tutStep.title : tutDone ? 'That is the whole game.' : o.t}</div>
+          <div className="ds">
+            {tutStep
+              ? tutStep.body
+              : tutDone
+                ? 'Stow, clear the checks, burn, get paid. The rest is deciding what to leave behind.'
+                : o.s}
+          </div>
         </div>
-        <button className="btn cta" onClick={cta.act}>
-          {cta.label}
-        </button>
+        {tutStep || tutDone ? (
+          <button
+            className="btn cta"
+            onClick={() => {
+              ui.tut = null
+              emit()
+            }}
+          >
+            {tutDone ? 'Free play' : 'Skip tutorial'}
+          </button>
+        ) : (
+          <button className="btn cta" onClick={cta.act}>
+            {cta.label}
+          </button>
+        )}
       </div>
 
       <div className="panes">
         {/* ---------------- PORT ---------------- */}
-        <section className={'pane pane-port' + (ui.tab === 'port' ? ' on' : '')}>
+        <section className={'pane pane-port' + (ui.tab === 'port' ? ' on' : '') + (tutStep?.tab === 'port' ? ' lit' : '')}>
           <div className="seg">
             <button className={ui.portTab === 'market' ? 'on' : ''} onClick={() => setPortTab('market')}>
               Market
@@ -494,7 +538,7 @@ export function RunView() {
         </section>
 
         {/* ---------------- DECK ---------------- */}
-        <section className={'pane pane-deck' + (ui.tab === 'deck' ? ' on' : '')}>
+        <section className={'pane pane-deck' + (ui.tab === 'deck' ? ' on' : '') + (tutStep?.tab === 'deck' ? ' lit' : '')}>
           {R.event && (
             <div className="banner">
               <div style={{ minWidth: 0 }}>
@@ -711,7 +755,13 @@ export function RunView() {
         </section>
 
         {/* ---------------- NAV ---------------- */}
-        <section className={'pane pane-nav' + (ui.tab === 'lanes' || ui.tab === 'chart' ? ' on' : '')}>
+        <section
+          className={
+            'pane pane-nav' +
+            (ui.tab === 'lanes' || ui.tab === 'chart' ? ' on' : '') +
+            (tutStep?.tab === 'lanes' || tutStep?.tab === 'chart' ? ' lit' : '')
+          }
+        >
           <div className={'navsec' + (ui.tab === 'lanes' ? ' on' : '')}>
             <div className="nav-body">
               <div className="sec-h">LANES OUT OF {coord(n)}</div>

@@ -9,6 +9,8 @@ import { EndView } from './EndView'
 import { HullPick } from './HullPick'
 import { Icon } from './Icon'
 import { RunView } from './RunView'
+import { LessonsScreen, MenuScreen, ScoresScreen } from './Screens'
+import { loadScores } from '../net/scores'
 
 let booted = false
 
@@ -79,11 +81,33 @@ export default function App() {
       } else {
         ui.view = 'hull'
       }
+      // the menu is the front door; a live save shows up as Continue run
+      ui.screen = 'menu'
       emit()
+      void loadScores()
     })
   }, [])
 
   const inRun = ui.view === 'run' && R && !R.over
+  const onBridge = ui.screen === 'bridge'
+
+  if (ui.view === 'boot') {
+    return (
+      <div className="shell">
+        <div className="boot">RAISING THE MANIFEST…</div>
+      </div>
+    )
+  }
+
+  if (!onBridge) {
+    return (
+      <div className="shell">
+        {ui.screen === 'menu' && <MenuScreen />}
+        {ui.screen === 'scores' && <ScoresScreen />}
+        {ui.screen === 'lessons' && <LessonsScreen />}
+      </div>
+    )
+  }
 
   return (
     <div className="shell">
@@ -94,8 +118,19 @@ export default function App() {
         {inRun ? <NodeChip /> : null}
         <div className="sp" />
         {inRun ? <Meters /> : null}
+        <button
+          className="menubtn"
+          title="Main menu"
+          aria-label="Main menu"
+          onClick={() => {
+            ui.screen = 'menu'
+            ui.confirm = null
+            emit()
+          }}
+        >
+          <Icon k="MENU" />
+        </button>
       </header>
-      {ui.view === 'boot' && <div className="boot">RAISING THE MANIFEST…</div>}
       {ui.view === 'hull' && <HullPick />}
       {ui.view === 'run' && R && (R.over ? <EndView /> : <RunView />)}
     </div>

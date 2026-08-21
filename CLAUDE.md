@@ -33,9 +33,12 @@ can land later without re-architecting.
 - `npx tsx web/test/pilot.ts [runs] [stages] [seed]` — winnability: a scripted
   pilot flies the solver's proven contract plan; fails the build if under 70%
   stage clears.
-- `npx tsx web/test/bridge.ts` — bay coverage (`coverage()`) and the plotted-burn
-  confirmation flow (plot/cancel/confirm, non-adjacent and no-fuel refusals).
-  All three run headless (no DOM needed).
+- `npx tsx web/test/bridge.ts` — bay coverage (`coverage()`), the plotted-burn
+  confirmation flow, and course plotting (route agrees with dijkstra, advances
+  on travel, auto-clears on arrival).
+- `npx tsx web/test/share.ts` — run-card facts for every ending.
+- `npx tsx web/test/screens.ts` — lesson/tutorial content, tutorial predicates
+  against real state, and run-end scoring. All run headless (no DOM needed).
 
 ## Rules encoded in the engine (don't "fix" these back)
 
@@ -60,6 +63,22 @@ can land later without re-architecting.
 - Travel is always confirmed: chart nodes and lane cards both call `askJump()`,
   which stores a `JumpPlan` (with `why` when blocked); only `confirmJump()` moves
   the ship, and it routes through `jump()` so fuel and inspection are re-guarded.
+
+## Screens, teaching, scores
+
+- `ui.screen` routes menu / scores / lessons / bridge; the menu is the front door
+  and a live save appears there as "Continue run".
+- `engine/teach.ts` holds the four lesson cards and the seven guided-run steps.
+  Tutorial `done` predicates are written against live state (not a fixed demo
+  board) so they hold on any generated sector; satisfied steps are skipped. The
+  guided run deliberately starts on the Long-hauler — it ships with one engine,
+  so "fit a second engine" is a real task.
+- Highscores need **no database**: they live in the same per-session JSON file as
+  the save (`server/data/saves/<hash>.json`, top five only), with localStorage as
+  the durable client copy. Both handlers merge rather than replace the record —
+  a save write must not wipe the board, and vice versa.
+- Runs are scored in one place (`finishRun` in actions.ts), covering retire,
+  scuttle, CALL IT, and busting on the wage bill; `endKind` makes it idempotent.
 
 ## Deploy
 

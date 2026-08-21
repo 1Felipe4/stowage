@@ -29,7 +29,12 @@ const ICONS: Record<string, string> = {
   BAG: '<path d="M6 8h12l-1 12H7z"/><path d="M9 8a3 3 0 016 0"/>',
   BAN: '<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>',
   SHARE: '<path d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7"/><path d="M12 16V3"/><path d="M7.5 7.5L12 3l4.5 4.5"/>',
-  FLAG: '<path d="M5 21V4"/><path d="M5 4h9l-1.2 4L14 12H5"/>'
+  FLAG: '<path d="M5 21V4"/><path d="M5 4h9l-1.2 4L14 12H5"/>',
+  PLAY: '<path d="M7 4l12 8-12 8z"/>',
+  TEACH: '<path d="M2.5 8.5L12 4l9.5 4.5L12 13z"/><path d="M6 10.5V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-5.5"/>',
+  CUP: '<path d="M7 4h10v5a5 5 0 01-10 0z"/><path d="M7 5.5H4.5A2.5 2.5 0 007 9M17 5.5h2.5A2.5 2.5 0 0117 9"/><path d="M12 14v4M8.5 20h7"/>',
+  CHEV: '<path d="M9 5l7 7-7 7"/>',
+  MENU: '<path d="M4 7h16M4 12h16M4 17h16"/>'
 }
 
 export function Icon({ k, cls }: { k: string; cls?: string }) {
