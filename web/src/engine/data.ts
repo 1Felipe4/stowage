@@ -93,7 +93,7 @@ export const KINDS: Record<KindId, KindDef> = {
 export const HIRES: Record<HireId, HireDef> = {
   HAND: {
     id: 'HAND', name: 'Deckhand', price: 26, deck: true,
-    blurb: 'Runs 4 occupied bays. Needs a bunk, air, and wages.'
+    blurb: 'Runs 4 mass of stowage. Needs a bunk, air, and wages.'
   },
   HAZMAT: {
     id: 'HAZMAT', name: 'Hazmat handler', price: 48, spec: 'HAZMAT',

@@ -1,4 +1,4 @@
-import { HIRES, MOD, TILES } from './data'
+import { HIRES, MOD, TILES, bayName } from './data'
 import { evaluate, fuelCap, surcharge } from './core'
 import { genStage } from './gen'
 import { makeSeed } from './rng'
@@ -154,10 +154,13 @@ export function buyFuel(n: number) {
 
 export function buyMod(k: ModCode) {
   if (R.credits < MOD[k].price) return
+  // purchases land straight on the deck — no bay clear, no sale
+  const i = R.grid.indexOf(null)
+  if (i < 0) return
   R.credits -= MOD[k].price
   R.spend += MOD[k].price
-  R.hold.push(k)
-  say(`Bought ${MOD[k].name}.`)
+  R.grid[i] = k
+  say(`Bought ${MOD[k].name}, stowed at ${bayName(i)}.`)
   touch()
 }
 
@@ -266,6 +269,8 @@ export function stuckReason(): string | null {
   const out = outEdges()
   if (!out.length) return 'No lanes lead out of this rock.'
   const n = here()
+  // standing on a warp point with warp fuel and a legal deck is never stuck
+  if (n.warp && R.fuel >= R.warpCost && shipOK()) return null
   const sellables = [...R.grid, ...R.hold].filter((k): k is string => !!k && k[0] !== '@')
   const canSell = sellRate() > 0 && sellables.length > 0
   const engines = sellables.filter((k) => k === 'THR').length
@@ -278,6 +283,10 @@ export function stuckReason(): string | null {
   const cheapest = Math.min(...out.map((e) => e.cost + surcharge()))
   if (R.fuel >= cheapest) return null
   const canBuy = n.fuel > 0 && R.credits >= n.fuel && fuelCap() > R.fuel
+  // pawning only sheds surcharge weight — it can never cover a lane's base
+  // cost, so with less fuel than the cheapest empty-ship lane it is no escape
+  const minBase = Math.min(...out.map((e) => e.cost))
+  if (R.fuel < minBase && !canBuy) return `Every lane out costs ${minBase}+ fuel, you hold ${R.fuel}, and none is for sale here.`
   if (canBuy || canSell) return null
   return 'No lane you can afford, no fuel for sale, nothing to sell.'
 }
@@ -344,6 +353,9 @@ export function tapBay(i: number) {
     if (g[i]) return
     g[i] = R.hold.splice(sel.n, 1)[0]
     ui.sel = null
+    // stowing cargo while already at its destination delivers it on the spot —
+    // no burning away and back just to trigger the arrival hook
+    if (g[i]![0] === '@') dropOff()
   } else {
     if (sel.i === i) {
       ui.sel = null

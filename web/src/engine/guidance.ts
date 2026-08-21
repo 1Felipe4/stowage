@@ -51,17 +51,29 @@ export function whyMod(k: ModCode): Why {
   return prod < draw ? { need: Math.ceil((draw - prod) / 2), s: `${draw - prod} power short` } : { need: 0, s: `${prod - draw} power spare` }
 }
 
+/** Warn when signing one more soul would outrun the bunks or air aboard —
+    hiring into that state fails inspection on the spot. */
+function hireStrain(): string {
+  const owned = [...(R.grid.filter(Boolean) as string[]), ...R.hold]
+  const c = (x: string) => owned.filter((v) => v === x).length
+  const s = souls() + 1
+  const short: string[] = []
+  if (c('BRT') * 2 < s) short.push('bunks')
+  if (c('LSP') * 2 < s) short.push('air')
+  return short.length ? ` — no spare ${short.join(' or ')}: the deck fails until you fit more` : ''
+}
+
 export function whyHire(id: HireId): Why {
   if (id === 'HAND') {
     const gap = Math.ceil(massOf() / 4) - deckCrew()
     return gap > 0
-      ? { need: gap, s: `the deck needs ${Math.ceil(massOf() / 4)} hands to run, you have ${deckCrew()}` }
-      : { need: 0, s: 'another body, another bunk' }
+      ? { need: gap, s: `the deck needs ${Math.ceil(massOf() / 4)} hands to run, you have ${deckCrew()}${hireStrain()}` }
+      : { need: 0, s: `another body, another bunk${hireStrain()}` }
   }
   const c = R.cargo.find((x) => x.need === HIRES[id].spec && !x.done)
   if (!c) return { need: 0, s: 'no work here needs one' }
   if (R.specs.includes(HIRES[id].spec!)) return { need: 0, s: 'already aboard' }
-  return { need: 1, s: `${c.short} at ${coord(R.nodes[c.at])} will not load without one` }
+  return { need: 1, s: `${c.short} at ${coord(R.nodes[c.at])} will not load without one${hireStrain()}` }
 }
 
 export interface Orders {
@@ -76,6 +88,12 @@ export function orders(): Orders {
     bad = res.checks.filter((c) => !c.ok)
   if (R.hold.length) {
     const m = modOf(R.hold[0])!
+    if (!R.grid.includes(null))
+      return {
+        k: 'bad',
+        t: 'The hold is full and no bay is clear.',
+        s: 'Pawn or dump something — you cannot burn with kit loose in the hold.'
+      }
     return { k: 'do', t: `Stow the ${m.short.toLowerCase()} in a clear bay.`, s: 'Tap it in the hold, then tap an empty bay.' }
   }
   if (bad.length)
@@ -95,7 +113,7 @@ export function orders(): Orders {
       t: `${gate.short} needs a ${HIRES[gate.need!].name.toLowerCase()}.`,
       s: n.hires.includes(gate.need!) ? 'One is hiring here.' : 'None hiring here.'
     }
-  const gap = n.stock.find((k) => whyMod(k).need && R.credits >= MOD[k].price)
+  const gap = R.grid.includes(null) ? n.stock.find((k) => whyMod(k).need && R.credits >= MOD[k].price) : undefined
   if (gap) return { k: 'buy', t: `Buy a ${MOD[gap].short.toLowerCase()} here.`, s: `${whyMod(gap).s}. ${MOD[gap].price} credits.` }
   const carrying = R.cargo.filter((c) => c.aboard)
   if (carrying.length)

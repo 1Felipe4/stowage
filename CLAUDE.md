@@ -25,6 +25,15 @@ can land later without re-architecting.
   session token plus an offline cache for PWA play; the server copy is canonical.
 - `prototype/stowage-v31.html` — the original single-file prototype, kept for reference.
 
+## Tests
+
+- `npx tsx web/test/fuzz.ts [runs] [seed]` — E2E fuzz: random-but-legal play through
+  the real actions, engine invariants asserted after every step, save/load
+  round-trips, and semantic verification of every declared stuck-lock.
+- `npx tsx web/test/pilot.ts [runs] [stages] [seed]` — winnability: a scripted
+  pilot flies the solver's proven contract plan; fails the build if under 70%
+  stage clears. Both run headless (no DOM needed).
+
 ## Rules encoded in the engine (don't "fix" these back)
 
 - Thrusters weigh nothing (`itemWeight` in `core.ts`) — each engine is a clean +4 capacity.
@@ -33,6 +42,14 @@ can land later without re-architecting.
   (engine count, power, bunks) would deadlock the annealer (the v3.1 Long-hauler freeze).
 - Cargo cells (`@n`) are stripped from the grid on stage carry-over (`gen.ts`) —
   undelivered freight was forfeited at the warp.
+- `genStage` caps reseed recursion (`lastResort` after 3 depths): a bloated carry
+  can make the profit floor unsatisfiable on every map, which previously recursed
+  into a stack overflow (frozen tab on PRESS ON).
+- Module purchases land directly in a clear bay (`buyMod`), never the hold; the
+  hold is only for signed cargo and salvage events.
+- Stowing cargo at its destination delivers immediately (`tapBay` → `dropOff`).
+- `stuckReason()` knows pawning can only shed surcharge, never cover a lane's
+  base fuel cost — and that a warp point with warp fuel is always an escape.
 
 ## Deploy
 

@@ -16,8 +16,12 @@ export interface Carry {
   hull: Hull
 }
 
-export function genStage(seed: string, stage: number, carry: Carry | null, startHull?: Hull): GameState {
+export function genStage(seed: string, stage: number, carry: Carry | null, startHull?: Hull, depth = 0): GameState {
   const rng = mulberry32(seedNum(seed))
+  // a bloated carry (packed deck, heavy wage bill) can make the profit floor
+  // and the arrangement proof unsatisfiable for EVERY map — after enough
+  // reseeds, hand out a best-effort stage instead of recursing forever
+  const lastResort = depth >= 3
   for (let attempt = 0; attempt < 40; attempt++) {
     const ROWS = 8,
       rows: NodeT[][] = [],
@@ -162,7 +166,7 @@ export function genStage(seed: string, stage: number, carry: Carry | null, start
       best = solveStage()
       repairs++
     }
-    if (best.profit < floorProfit()) continue
+    if (best.profit < floorProfit() && !lastResort) continue
 
     // and prove the winning subset can actually be arranged on the deck
     const bag = R.grid.filter(Boolean).slice() as string[]
@@ -173,12 +177,12 @@ export function genStage(seed: string, stage: number, carry: Carry | null, start
     })
     const feasible = bag.length <= TILES && !!fits(bag, 60, 240, rng)
     R.cargo.forEach((c) => (c.aboard = false))
-    if (!feasible) continue
+    if (!feasible && !lastResort) continue
 
     R.opening = R.credits
     R.best = best
     R.repairs = repairs
     return R
   }
-  return genStage(seed + 'X', stage, carry, startHull)
+  return genStage(seed + 'X', stage, carry, startHull, depth + 1)
 }

@@ -16,6 +16,37 @@ function NeedTag({ w }: { w: Why }) {
   return <i className="tagneed">NEED{w.need > 1 ? ` ×${w.need}` : ''}</i>
 }
 
+/* Arm-then-confirm purchase button: first tap shows the price as a question,
+   second tap within 3.5s commits. Disarms on its own. */
+function ConfirmBuy({ price, disabled, blocked, onBuy }: { price: number; disabled: boolean; blocked?: string; onBuy: () => void }) {
+  const [armed, setArmed] = useState(false)
+  useEffect(() => {
+    if (!armed) return
+    const t = window.setTimeout(() => setArmed(false), 3500)
+    return () => window.clearTimeout(t)
+  }, [armed])
+  if (blocked)
+    return (
+      <button disabled title={blocked}>
+        {blocked}
+      </button>
+    )
+  return (
+    <button
+      className={armed ? 'pri' : ''}
+      disabled={disabled}
+      onClick={() => {
+        if (armed) {
+          onBuy()
+          setArmed(false)
+        } else setArmed(true)
+      }}
+    >
+      {armed ? `PAY ${price}?` : price}
+    </button>
+  )
+}
+
 /* Two-tap scuttle: no lock state may ever strand a run, so this is always
    reachable — but never one accidental tap away. */
 function ScuttleButton() {
@@ -72,7 +103,9 @@ export function RunView() {
     room <= 0
       ? heldTanks
         ? `Tanks are full. The ${heldTanks} tank${heldTanks > 1 ? 's' : ''} in your hold add nothing until stowed in a bay.`
-        : `Tanks are full at ${fuelCap()}. Fit another tank to carry more.`
+        : fuelCap() === 0
+          ? 'No tanks fitted — fuel has nowhere to go. Buy a fuel tank first.'
+          : `Tanks are full at ${fuelCap()}. Fit another tank to carry more.`
       : afford <= 0
         ? `You cannot afford a single unit at ${n.fuel}.`
         : `${R.fuel} aboard, room for ${room} more.`
@@ -238,9 +271,7 @@ export function RunView() {
                     <div className="ds">{w.s}</div>
                   </div>
                 </div>
-                <button onClick={() => hire(id)} disabled={R.credits < hh.price}>
-                  {hh.price}
-                </button>
+                <ConfirmBuy price={hh.price} disabled={R.credits < hh.price} onBuy={() => hire(id)} />
               </div>
             )
           })}
@@ -260,9 +291,12 @@ export function RunView() {
                     <div className="ds">{w.s}</div>
                   </div>
                 </div>
-                <button onClick={() => buyMod(k)} disabled={R.credits < mm.price}>
-                  {mm.price}
-                </button>
+                <ConfirmBuy
+                  price={mm.price}
+                  disabled={R.credits < mm.price}
+                  blocked={R.grid.includes(null) ? undefined : 'NO BAY'}
+                  onBuy={() => buyMod(k)}
+                />
               </div>
             )
           })}
@@ -317,7 +351,7 @@ export function RunView() {
                   <div>
                     <div className="nm">{HIRES[id].name.toUpperCase()}</div>
                     <div className="ds">
-                      {HIRES[id].deck ? 'runs 4 bays' : 'does not work the deck'} · {R.wage} wages
+                      {HIRES[id].deck ? 'runs 4 mass' : 'does not work the deck'} · {R.wage} wages
                       {locked ? ' · tied to cargo aboard' : ''}
                     </div>
                   </div>

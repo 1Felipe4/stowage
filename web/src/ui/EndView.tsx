@@ -23,8 +23,12 @@ export function EndView() {
                 <dd className="up">+{s.revenue}</dd>
               </div>
               <div>
-                <dt>SPENT ON SHIP &amp; FUEL</dt>
-                <dd className="dn">−{s.spend - s.wages - s.penalty}</dd>
+                <dt>SHIP &amp; FUEL</dt>
+                {(() => {
+                  const net = s.spend - s.wages - s.penalty
+                  // pawning more than you spend nets out positive — show it that way
+                  return <dd className={net > 0 ? 'dn' : 'up'}>{net > 0 ? `−${net}` : `+${-net}`}</dd>
+                })()}
               </div>
               <div>
                 <dt>WAGES</dt>
