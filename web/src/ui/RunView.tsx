@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  accept, buyFuel, buyMod, callIt, coord, doWarp, here, hire, jettison, jump, outEdges,
+  accept, askJump, buyFuel, buyMod, callIt, cancelJump, confirmJump, coord, doWarp, here, hire, jettison, outEdges,
   payOff, scuttle, sellMod, sellRate, sellValue, shipOK, stuckReason, tapBay, tapHold, toggleFocus
 } from '../engine/actions'
-import { evaluate, fuelCap, modOf, souls, surcharge } from '../engine/core'
+import { coverage, evaluate, fuelCap, massOf, modOf, souls, surcharge } from '../engine/core'
 import { HIRES, KINDS, MOD, TILES, bayName } from '../engine/data'
 import { orders, whyHire, whyMod, type Why } from '../engine/guidance'
 import { R, emit, ui, type PortTab, type Tab } from '../engine/state'
@@ -79,6 +79,76 @@ function ScuttleButton() {
   )
 }
 
+/* The plotted-burn confirmation: destination, what's there, fuel maths,
+   what pays on arrival. Nothing moves until the go button. */
+function ConfirmBurn() {
+  const c = ui.confirm!
+  const d = R.nodes[c.to]
+  const what: string[] = []
+  if (d.port) what.push(`Yard, ${d.stock.length} lines`)
+  if (d.hires.length) what.push('hiring hall')
+  if (d.fuel) what.push(`fuel at ${d.fuel}`)
+  if (d.warp) what.push('warp point')
+
+  const flags: { k: string; cls: string; txt: string }[] = []
+  R.cargo.forEach((x) => {
+    if (x.aboard && x.to === c.to) flags.push({ k: 'COINS', cls: 'green', txt: `${x.short} signs over on arrival. Pays ${x.fee}.` })
+    if (!x.taken && !x.done && x.at === c.to) flags.push({ k: 'CARGO', cls: 'amber', txt: `${x.short} is on offer there for ${x.fee}.` })
+  })
+  const wantThere = d.stock.filter((k) => whyMod(k).need > 0)
+  if (wantThere.length) flags.push({ k: 'BAG', cls: 'amber', txt: `${wantThere.map((k) => MOD[k].name).join(', ')} in stock there.` })
+  if (c.why) flags.push({ k: 'BAN', cls: 'red', txt: c.why })
+
+  return (
+    <div className="overlay" onClick={cancelJump}>
+      <div className="confirmcard" onClick={(e) => e.stopPropagation()}>
+        <div className={'kick' + (c.why ? ' bad' : '')}>
+          <Icon k={c.why ? 'ALERT' : 'ROUTE'} />
+          <span>{c.why ? 'CANNOT BURN' : 'CONFIRM BURN'}</span>
+        </div>
+        <div className="chd">
+          <div className="cc">{coord(d)}</div>
+          <div className="cw">{what.length ? what.join(' · ') : 'Bare rock, nothing to buy'}</div>
+        </div>
+        <div className="cstats">
+          <div className="cstat">
+            <div className="sl">FUEL BURN</div>
+            <div className={'sv ' + (c.lane ? (c.cost > R.fuel ? 'red' : 'blue') : '')}>{c.lane ? c.cost : '—'}</div>
+            <div className="ss">
+              {c.lane ? (c.sur ? `lane ${c.lane} + ${c.sur} overmass` : `lane ${c.lane}, no overmass`) : 'no lane'}
+            </div>
+          </div>
+          <div className="cstat">
+            <div className="sl">FUEL AFTER</div>
+            <div className="sv">{c.lane ? Math.max(0, R.fuel - c.cost) : R.fuel}</div>
+            <div className="ss">of {fuelCap()} held</div>
+          </div>
+        </div>
+        {flags.length > 0 && (
+          <div className="cflags">
+            {flags.map((f, i) => (
+              <div className={'cflag ' + f.cls} key={i}>
+                <Icon k={f.k} />
+                <span>{f.txt}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="cbtns">
+          <button className="btn" onClick={cancelJump}>
+            {c.why ? 'Close' : `Stay at ${coord(here())}`}
+          </button>
+          {!c.why && (
+            <button className="btn pri go" onClick={confirmJump}>
+              Burn {c.cost} and go
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const SUPPORT_TEXT: Record<string, string> = {
   SHD: 'needs shielding on every touching bay',
   CRY: 'needs a cryo unit alongside',
@@ -93,6 +163,14 @@ export function RunView() {
   const gridRef = useRef<HTMLDivElement>(null)
   const stuckWhy = stuckReason()
   const sur = surcharge()
+  const cov = coverage()
+  const mass = massOf()
+  const overMass = Math.max(0, mass - cov.capM)
+  const stowedBays = R.grid.filter(Boolean).length
+  const crewLine = cov.hands
+    ? `${cov.hands} hand${cov.hands > 1 ? 's' : ''} run${cov.hands > 1 ? '' : 's'} ${cov.capM} mass · ` +
+      (cov.idle.length ? `${stowedBays - cov.idle.length} bays active, ${cov.idle.length} with no hand` : 'every stowed bay covered')
+    : 'Nobody working the deck · every stowed bay idle'
   const placing = ui.sel?.t === 'hold'
   const selMod = ui.sel ? modOf(ui.sel.t === 'bay' ? R.grid[ui.sel.i] : R.hold[ui.sel.n]) : null
 
@@ -429,6 +507,54 @@ export function RunView() {
             </div>
           </div>
 
+          <div className="crewstrip">
+            <div className="cl">
+              <span className="k">DECK CREW</span>
+              <span className="t">{crewLine}</span>
+              <button
+                className={'st' + (!cov.hands ? ' none' : cov.idle.length ? ' over' : '')}
+                onClick={() => {
+                  if (!cov.hands) {
+                    setTab('port')
+                    setPortTab('crew')
+                  } else if (cov.idle.length) {
+                    toggleFocus(cov.idle)
+                    setTab('deck')
+                  }
+                }}
+              >
+                {!cov.hands
+                  ? 'hire a deckhand'
+                  : cov.idle.length
+                    ? `show the ${cov.idle.length} idle · +${sur} fuel a burn`
+                    : 'within the crew'}
+              </button>
+            </div>
+            <div className="csegs">
+              {Array.from({ length: Math.max(cov.hands, 1) }, (_, i) => {
+                const carried = Math.max(0, Math.min(4, mass - 4 * i))
+                return (
+                  <div
+                    className={'cseg' + (cov.hands ? '' : ' none')}
+                    key={'seg' + i}
+                    title={cov.hands ? `One hand runs 4 mass. This one is carrying ${carried}.` : 'No hands aboard.'}
+                  >
+                    <i style={{ width: `${cov.hands ? (carried / 4) * 100 : 0}%` }} />
+                  </div>
+                )
+              })}
+              {overMass > 0 && (
+                <div
+                  className="cseg overf"
+                  style={{ flexBasis: Math.min(40, overMass * 12) }}
+                  title={`${overMass} mass beyond what the crew can run.`}
+                >
+                  <i style={{ width: '100%' }} />
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="gridwrap">
             <div className="grid" ref={gridRef}>
               {Array.from({ length: TILES }, (_, i) => {
@@ -436,12 +562,14 @@ export function RunView() {
                   mm = modOf(k),
                   ht = res.heat[i]
                 const over = !!k && ht > 5
+                const idle = !!k && cov.active[i] === false
                 const cls = [
                   'cell',
                   k ? '' : placing ? 'place' : 'empty',
                   k && k[0] === '@' ? 'cargo' : '',
                   k === 'RCT' ? 'rct' : '',
                   k === 'RAD' || k === 'CRY' ? 'cold' : '',
+                  idle ? 'idle' : '',
                   ui.sel && ui.sel.t === 'bay' && ui.sel.i === i ? 'sel' : '',
                   ui.focus.includes(i) ? 'foc' : '',
                   over ? 'over' : ''
@@ -454,7 +582,12 @@ export function RunView() {
                     className={cls}
                     key={i}
                     tabIndex={0}
-                    title={mm ? `${mm.name} at ${bayName(i)} — heat ${ht}` : `Bay ${bayName(i)} clear`}
+                    title={
+                      mm
+                        ? `${mm.name} at ${bayName(i)} — heat ${ht}` +
+                          (idle ? ' — no hand left to run it' : k === 'THR' ? ' — weighs nothing, runs itself' : ' — run by the crew')
+                        : `Bay ${bayName(i)} clear`
+                    }
                     onClick={() => tapBay(i)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -472,6 +605,7 @@ export function RunView() {
                       <>
                         <Icon k={mm.icon} />
                         <span className="code">{mm.short}</span>
+                        {idle ? <span className="nohand">NO HAND</span> : null}
                       </>
                     ) : (
                       <>
@@ -679,7 +813,7 @@ export function RunView() {
                           </div>
                         </details>
                       )}
-                      <button className={'btn wide' + (why ? '' : ' pri')} disabled={!!why} onClick={() => jump(e)}>
+                      <button className={'btn wide' + (why ? '' : ' pri')} disabled={!!why} onClick={() => askJump(e.b)}>
                         {why || `BURN ${cost} AND GO`}
                       </button>
                     </div>
@@ -708,13 +842,22 @@ export function RunView() {
                 <div style={{ flex: 1 }} />
                 <div className="plan">PLAN {R.seed}</div>
               </div>
-              <div className="chartcard" dangerouslySetInnerHTML={{ __html: chartSvg() }} />
+              <div
+                className="chartcard"
+                onClick={(e) => {
+                  const g = (e.target as Element).closest?.('[data-nd]')
+                  const id = g?.getAttribute('data-nd')
+                  if (id !== null && id !== undefined) askJump(+id)
+                }}
+                dangerouslySetInnerHTML={{ __html: chartSvg() }}
+              />
               <div className="legend">
                 <span className="pt">+ work on offer</span>
                 <span className="en">→ drop, aboard now</span>
                 <span className="lt">→ drop, not yet taken</span>
                 <span className="wp">lane open now</span>
               </div>
+              <div className="chart-hint">Tap any node to plot a burn. Nothing moves until you confirm.</div>
               <ScuttleButton />
               {R.log.length > 0 && (
                 <div className="log">
@@ -747,6 +890,8 @@ export function RunView() {
           </button>
         ))}
       </nav>
+
+      {ui.confirm && <ConfirmBurn />}
     </>
   )
 }

@@ -103,6 +103,8 @@ export function jump(e: Edge) {
   ui.sel = null
   ui.focus = []
   ui.tab = 'port' // arriving somewhere new — show what the rock offers
+  ui.portTab = 'market'
+  ui.confirm = null
   rollEvent()
   say(`Burned ${cost} to ${coord(here())}.`)
   dropOff()
@@ -377,6 +379,40 @@ export function tapBay(i: number) {
 export function tapHold(n: number) {
   ui.sel = ui.sel && ui.sel.t === 'hold' && ui.sel.n === n ? null : { t: 'hold', n }
   emit()
+}
+
+/* ---- plotted burns: chart taps and lane cards both open a confirmation;
+        nothing moves until the player confirms ---- */
+export function askJump(to: number) {
+  if (to === R.at) return
+  const e = outEdges().find((x) => x.b === to)
+  const sur = surcharge()
+  const lane = e ? e.cost : 0
+  const cost = e ? lane + sur : 0
+  let why: string | null = null
+  if (!e)
+    why = `No lane runs from ${coord(here())} to ${coord(R.nodes[to])}. Only nodes joined to yours by a line are one burn away.`
+  else {
+    const bad = evaluate(R.grid).checks.filter((c) => !c.ok)
+    if (bad.length) why = `Deck fails inspection — ${bad.length} to clear, starting with ${bad[0].lb.toLowerCase()}.`
+    else if (R.fuel < cost) why = `The burn costs ${cost} fuel and you hold ${R.fuel}.`
+  }
+  ui.confirm = { to, lane, sur, cost, why }
+  emit()
+}
+
+export function cancelJump() {
+  ui.confirm = null
+  emit()
+}
+
+export function confirmJump() {
+  const c = ui.confirm
+  if (!c || c.why) return
+  const e = outEdges().find((x) => x.b === c.to)
+  ui.confirm = null
+  if (e) jump(e) // jump re-guards fuel and inspection itself
+  else emit()
 }
 
 export function toggleFocus(live: number[]) {

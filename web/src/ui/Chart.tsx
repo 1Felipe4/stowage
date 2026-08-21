@@ -24,12 +24,17 @@ export function chartSvg(): string {
   R.nodes.forEach((n) => {
     const p = pos(n),
       me = n.id === R.at
+    const isOpen = open.includes(n.id)
     const off = R.cargo.filter((c) => !c.taken && !c.done && c.at === n.id) // work on offer here
     const carry = R.cargo.filter((c) => c.aboard && c.to === n.id) // drop for cargo aboard
     const later = R.cargo.filter((c) => !c.done && !c.aboard && c.to === n.id) // drop for work not yet taken
+    // whole node is a tap target — RunView delegates clicks via data-nd
+    s += `<g class="ndg" data-nd="${n.id}">`
+    s += `<circle cx="${p.x}" cy="${p.y}" r="20" fill="transparent"/>`
+    if (isOpen && !me) s += `<circle class="nd openring" cx="${p.x}" cy="${p.y}" r="16"/>`
     if (n.warp) s += `<circle class="nd warpring" cx="${p.x}" cy="${p.y}" r="15"/>`
     if (carry.length || later.length) s += `<circle class="nd drop ${carry.length ? 'live' : ''}" cx="${p.x}" cy="${p.y}" r="13"/>`
-    s += `<circle class="nd ${me ? 'here' : ''} ${open.includes(n.id) ? 'open' : ''} ${R.visited.includes(n.id) ? 'done' : ''} ${off.length ? 'part' : ''}" cx="${p.x}" cy="${p.y}" r="10"/>`
+    s += `<circle class="nd ${me ? 'here' : ''} ${isOpen ? 'open' : ''} ${R.visited.includes(n.id) ? 'done' : ''} ${off.length ? 'part' : ''}" cx="${p.x}" cy="${p.y}" r="10"/>`
     s += `<text class="co" x="${p.x}" y="${p.y - 14}" text-anchor="middle">${coord(n)}</text>`
     const marks: string[] = []
     if (off.length) marks.push(`<tspan class="pt">+${off.map((c) => c.short.slice(-1)).join('')}</tspan>`)
@@ -38,6 +43,7 @@ export function chartSvg(): string {
     if (marks.length) s += `<text x="${p.x}" y="${p.y + 19}" text-anchor="middle">${marks.join(' ')}</text>`
     const kind = n.warp ? 'WARP' : n.port ? 'PORT' : n.fuel ? 'fuel' : ''
     if (kind) s += `<text class="${n.warp ? 'wp' : ''}" x="${p.x}" y="${p.y + (marks.length ? 28 : 19)}" text-anchor="middle">${kind}</text>`
+    s += `</g>`
   })
   return s + `</svg>`
 }

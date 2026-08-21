@@ -24,7 +24,10 @@ const ICONS: Record<string, string> = {
   TAGI: '<path d="M12 2H2v10l9.3 9.3a2 2 0 002.8 0l7-7a2 2 0 000-2.8z"/><circle cx="7" cy="7" r="1.5"/>',
   STOWIN: '<path d="M12 3v12M6 9l6 6 6-6"/><path d="M5 21h14"/>',
   PLUS: '<path d="M12 5v14M5 12h14"/>',
-  MINUS: '<path d="M5 12h14"/>'
+  MINUS: '<path d="M5 12h14"/>',
+  COINS: '<circle cx="8" cy="8" r="5"/><path d="M14.5 9.6a5 5 0 11-4.9 5"/>',
+  BAG: '<path d="M6 8h12l-1 12H7z"/><path d="M9 8a3 3 0 016 0"/>',
+  BAN: '<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>'
 }
 
 export function Icon({ k, cls }: { k: string; cls?: string }) {

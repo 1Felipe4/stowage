@@ -14,6 +14,15 @@ export type Sel = { t: 'bay'; i: number } | { t: 'hold'; n: number }
 export type Tab = 'port' | 'deck' | 'lanes' | 'chart'
 export type PortTab = 'market' | 'crew' | 'contracts'
 
+/** A plotted burn awaiting confirmation. Nothing moves until confirmed. */
+export interface JumpPlan {
+  to: number
+  lane: number
+  sur: number
+  cost: number
+  why: string | null
+}
+
 export interface UiState {
   view: 'boot' | 'hull' | 'run'
   sel: Sel | null
@@ -21,9 +30,10 @@ export interface UiState {
   /** active pane on mobile; desktop shows all three panes regardless */
   tab: Tab
   portTab: PortTab
+  confirm: JumpPlan | null
 }
 
-export const ui: UiState = { view: 'boot', sel: null, focus: [], tab: 'deck', portTab: 'market' }
+export const ui: UiState = { view: 'boot', sel: null, focus: [], tab: 'deck', portTab: 'market', confirm: null }
 
 let version = 0
 const subs = new Set<() => void>()

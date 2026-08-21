@@ -85,6 +85,42 @@ export function surcharge(): number {
   return Math.ceil(Math.max(0, massOf() - capacity()) / 2)
 }
 
+export interface Coverage {
+  hands: number
+  capM: number
+  /** bay index → true when a hand runs it (or it needs none) */
+  active: Record<number, boolean>
+  idle: number[]
+}
+
+/** Which stowed bays the deck crew can actually run. Each hand runs 4 mass;
+    coverage fills in bay order from A1, so the tail of the deck goes idle
+    first. Zero-mass items (thrusters) always read active — they need no hand.
+    Loose hold items are charged first: they are the crew's problem too. */
+export function coverage(): Coverage {
+  const hands = deckCrew(),
+    capM = 4 * hands
+  const active: Record<number, boolean> = {}
+  const idle: number[] = []
+  let acc = R.hold.reduce((a, k) => a + itemWeight(k), 0)
+  R.grid.forEach((k, i) => {
+    if (!k) return
+    const w = itemWeight(k)
+    if (!w) {
+      active[i] = true
+      return
+    }
+    if (hands && acc + w <= capM) {
+      active[i] = true
+      acc += w
+    } else {
+      active[i] = false
+      idle.push(i)
+    }
+  })
+  return { hands, capM, active, idle }
+}
+
 /** Made vs drawn across the deck — feeds the HUD power meter. */
 export function powerBalance(): { prod: number; draw: number } {
   let prod = 0,

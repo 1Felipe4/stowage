@@ -32,7 +32,10 @@ can land later without re-architecting.
   round-trips, and semantic verification of every declared stuck-lock.
 - `npx tsx web/test/pilot.ts [runs] [stages] [seed]` — winnability: a scripted
   pilot flies the solver's proven contract plan; fails the build if under 70%
-  stage clears. Both run headless (no DOM needed).
+  stage clears.
+- `npx tsx web/test/bridge.ts` — bay coverage (`coverage()`) and the plotted-burn
+  confirmation flow (plot/cancel/confirm, non-adjacent and no-fuel refusals).
+  All three run headless (no DOM needed).
 
 ## Rules encoded in the engine (don't "fix" these back)
 
@@ -50,6 +53,13 @@ can land later without re-architecting.
 - Stowing cargo at its destination delivers immediately (`tapBay` → `dropOff`).
 - `stuckReason()` knows pawning can only shed surcharge, never cover a lane's
   base fuel cost — and that a warp point with warp fuel is always an escape.
+- Deckhands run *mass*, not particular bays: each hand covers 4 mass and
+  `coverage()` fills in bay order from A1, so the deck tail goes idle first.
+  Zero-mass items (thrusters) always read active. This is presentation over the
+  existing surcharge rule — coverage does not gate anything on its own.
+- Travel is always confirmed: chart nodes and lane cards both call `askJump()`,
+  which stores a `JumpPlan` (with `why` when blocked); only `confirmJump()` moves
+  the ship, and it routes through `jump()` so fuel and inspection are re-guarded.
 
 ## Deploy
 
