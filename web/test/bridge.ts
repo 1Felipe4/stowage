@@ -48,7 +48,10 @@ ck('cancel moves nothing', ui.confirm === null && R.at === before.at && R.fuel =
 askJump(e0.b)
 confirmJump()
 ck('confirm actually travels', R.at === e0.b, `at=${coord(here())}`)
-ck('confirm spends fuel', R.fuel === before.fuel - (e0.cost + 0), `fuel=${R.fuel} was ${before.fuel}`)
+// travel rolls an event, and 'fuel siphoned' takes 2 more — so the lane cost
+// is a floor on what was spent, not an exact figure
+ck('confirm spends at least the lane cost', R.fuel <= before.fuel - e0.cost, `fuel=${R.fuel} was ${before.fuel} lane=${e0.cost}`)
+ck('confirm spends no more than lane + event', R.fuel >= before.fuel - e0.cost - 2, `fuel=${R.fuel}`)
 ck('confirm clears the overlay', ui.confirm === null)
 ck('arriving opens the port pane', ui.tab === 'port' && ui.portTab === 'market')
 
@@ -58,7 +61,9 @@ askJump(far.id)
 ck('non-adjacent refused with reason', !!ui.confirm?.why?.includes('No lane runs'), String(ui.confirm?.why))
 cancelJump()
 
-// insufficient fuel refused
+// insufficient fuel refused. Clear the hold first: a travel event may have
+// dropped salvage into it, and inspection is judged before fuel is.
+R.hold = []
 R.fuel = 0
 const e1 = outEdges()[0]
 askJump(e1.b)
