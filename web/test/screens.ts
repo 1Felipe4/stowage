@@ -78,5 +78,80 @@ ck('new run keeps the tutorial if one was started', ui.tut?.i === 0)
 ck('new run starts on the deck pane', ui.tab === 'deck')
 ck('guided-run hull makes step 1 meaningful', !TUT[0].done(), `engines=${R.grid.filter(k => k === 'THR').length}`)
 void setR
+
+/* ---- directive actions: every alert must point somewhere useful ---- */
+import { orders } from '../src/engine/guidance'
+import { runOrder, accept, buyFuel } from '../src/engine/actions'
+import { courseInfo } from '../src/engine/course'
+
+genStage('ORD', 1, null, HULLS[0])
+R.credits = 400
+R.fuel = 12
+let o = orders()
+ck('every order carries an action and a label', !!o.act && !!o.cta && o.act.kind !== undefined, `${o.cta}/${o.act.kind}`)
+
+// a deck fault that a move can fix must hand back the offending bay
+const freeBay = R.grid.indexOf(null)
+R.grid[freeBay] = 'RCT'   // second reactor: heat/power trouble, positional
+R.crew = ['HAND']         // and push coverage over
+o = orders()
+if (o.k === 'bad' && o.act.kind === 'fixDeck') {
+  runOrder(o.act)
+  ck('fixDeck focuses bays', ui.focus.length > 0)
+  ck('fixDeck selects a bay holding something', ui.sel?.t === 'bay' && !!R.grid[(ui.sel as {t:'bay';i:number}).i])
+  ck('fixDeck opens the deck', ui.tab === 'deck')
+} else console.log('SKIP fixDeck (this board failed non-positionally: ' + o.t + ')')
+
+// low fuel at a fuel line should raise a market alert
+genStage('ORD2', 1, null, HULLS[0])
+R.credits = 400
+R.fuel = 1
+const fuelNode = R.nodes.find(nd => nd.fuel > 0)!
+R.at = fuelNode.id
+o = orders()
+if (o.k === 'buy' && /fuel/i.test(o.t)) {
+  runOrder(o.act)
+  ck('low-fuel alert opens the market', ui.tab === 'port' && ui.portTab === 'market', `${ui.tab}/${ui.portTab}`)
+} else console.log('SKIP low-fuel alert (board raised: ' + o.t + ')')
+
+// a contract on offer here should open contracts, not the deck
+genStage('ORD3', 1, null, HULLS[0])
+R.credits = 400
+R.fuel = 12
+const offer = R.cargo.find(c => !c.need)!
+offer.at = R.at
+o = orders()
+if (/on offer here/.test(o.t)) {
+  runOrder(o.act)
+  ck('offer alert opens contracts', ui.tab === 'port' && ui.portTab === 'contracts', `${ui.tab}/${ui.portTab}`)
+} else console.log('SKIP offer alert (board raised: ' + o.t + ')')
+
+// work waiting at a distant node should plot a course to it
+genStage('ORD4', 1, null, HULLS[0])
+R.credits = 400
+R.fuel = 10   // not thin (no fuel alert), not brimming (no tank alert)
+const far = R.nodes.filter(nd => nd.id !== R.at && !R.adj![R.at].some(e => e.to === nd.id))
+                   .sort((a,b) => R.D![R.at][b.id] - R.D![R.at][a.id])[0]
+// every contract sits at that far node, nothing aboard, deck as generated (legal)
+R.cargo.forEach(c => { c.at = far.id; c.taken = false; c.aboard = false; c.done = false; c.need = null })
+o = orders()
+ck('distant work raises a go order', o.k === 'go' && /waiting at/.test(o.t), o.t)
+ck('distant work plots a course', o.act.kind === 'course', o.act.kind)
+if (o.act.kind === 'course') {
+  runOrder(o.act)
+  ck('course targets the far node', courseInfo()?.target === far.id, `target=${courseInfo()?.target} want=${far.id}`)
+  ck('course alert opens the lanes', ui.tab === 'lanes', ui.tab)
+  ck('next hop is adjacent to us', R.adj![R.at].some(e => e.to === courseInfo()!.nextHop))
+}
+
+// an adjacent target needs no course — just the lanes
+genStage('ORD5', 1, null, HULLS[0])
+R.credits = 400; R.fuel = 10
+const nb = R.adj![R.at][0].to
+R.cargo.forEach(c => { c.at = nb; c.taken = false; c.aboard = false; c.done = false; c.need = null })
+o = orders()
+ck('adjacent work opens lanes without a course', o.act.kind === 'tab' && o.act.tab === 'lanes', JSON.stringify(o.act))
+
+void buyFuel
 console.log(fail ? `\n${fail} FAILURES` : '\nALL PASS')
 process.exit(fail ? 1 : 0)

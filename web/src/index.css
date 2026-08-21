@@ -475,3 +475,15 @@ svg.map{display:block;width:100%;height:auto}
 .menuitem.danger.armed{background:var(--red);border-color:var(--red)}
 .menuitem.danger.armed .ic,.menuitem.danger.armed .mlab{color:#1B0505}
 .menuitem.danger.armed .msub{color:rgba(0,0,0,.62)}
+
+/* directive button is the main way alerts link somewhere — visible on mobile */
+.directive .cta{display:inline-flex;align-items:center;gap:5px;padding:8px 9px}
+.directive .cta .ic{width:13px;height:13px;flex:0 0 13px}
+.directive .cta .ctalabel{display:none}
+@media (min-width:1080px){
+  .directive .cta{padding:8px 11px}
+  .directive .cta .ctalabel{display:inline}
+}
+/* attention dot on a port sub-tab */
+.seg button{position:relative}
+.segdot{position:absolute;top:5px;right:7px;width:6px;height:6px;border-radius:9999px;background:var(--amber)}

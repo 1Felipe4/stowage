@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   accept, askJump, buyFuel, buyMod, callIt, cancelJump, confirmJump, coord, doWarp, dropCourse, here, hire, jettison,
-  outEdges, payOff, plotCourse, scuttle, sellMod, sellRate, sellValue, shipOK, stuckReason, tapBay, tapHold, toggleFocus
+  outEdges, payOff, plotCourse, runOrder, scuttle, sellMod, sellRate, sellValue, shipOK, stuckReason, tapBay, tapHold,
+  toggleFocus
 } from '../engine/actions'
 import { coverage, evaluate, fuelCap, massOf, modOf, souls, surcharge } from '../engine/core'
 import { courseInfo } from '../engine/course'
@@ -215,8 +216,6 @@ export function RunView() {
 
   const needStock = n.stock.filter((k) => whyMod(k).need > 0)
   const shelfStock = n.stock.filter((k) => whyMod(k).need === 0)
-  const hireNeeds = n.hires.filter((id) => whyHire(id).need > 0).length
-  const portBadge = needStock.length + hireNeeds
 
   const room = fuelCap() - R.fuel
   const afford = n.fuel ? Math.floor(R.credits / n.fuel) : 0
@@ -243,36 +242,16 @@ export function RunView() {
     gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
-  function directiveCta(): { label: string; act: () => void } {
-    if (o.k === 'bad') {
-      const f = bad.find((c) => c.focus.some((i) => i >= 0))
-      return {
-        label: 'Show the bays',
-        act: () => {
-          if (f) checkTap(f)
-          else setTab('deck')
-        }
-      }
-    }
-    if (o.k === 'do')
-      return {
-        label: 'Go to deck',
-        act: () => {
-          setTab('deck')
-          gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        }
-      }
-    if (o.k === 'buy')
-      return {
-        label: 'Open the market',
-        act: () => {
-          setTab('port')
-          setPortTab('market')
-        }
-      }
-    return { label: 'Open lanes', act: () => setTab('lanes') }
+  /* Attention per port sub-tab, so the tab bar can say which one to open. */
+  const attention = {
+    market:
+      needStock.length +
+      (n.fuel && R.credits >= n.fuel && fuelCap() > R.fuel && R.fuel <= 4 ? 1 : 0),
+    crew: n.hires.filter((id) => whyHire(id).need > 0).length,
+    contracts: R.cargo.filter(
+      (c) => (!c.taken && !c.done && c.at === R.at && R.grid.includes(null)) || (!c.done && c.to === R.at && !c.aboard)
+    ).length
   }
-  const cta = directiveCta()
 
   const sortedChecks = res.checks.slice().sort((a, b) => (a.ok === b.ok ? 0 : a.ok ? 1 : -1))
 
@@ -389,8 +368,9 @@ export function RunView() {
             {tutDone ? 'Free play' : 'Skip tutorial'}
           </button>
         ) : (
-          <button className="btn cta" onClick={cta.act}>
-            {cta.label}
+          <button className="btn cta" onClick={() => runOrder(o.act)}>
+            <span className="ctalabel">{o.cta}</span>
+            <Icon k="CHEV" />
           </button>
         )}
       </div>
@@ -399,15 +379,12 @@ export function RunView() {
         {/* ---------------- PORT ---------------- */}
         <section className={'pane pane-port' + (ui.tab === 'port' ? ' on' : '') + (tutStep?.tab === 'port' ? ' lit' : '')}>
           <div className="seg">
-            <button className={ui.portTab === 'market' ? 'on' : ''} onClick={() => setPortTab('market')}>
-              Market
-            </button>
-            <button className={ui.portTab === 'crew' ? 'on' : ''} onClick={() => setPortTab('crew')}>
-              Crew
-            </button>
-            <button className={ui.portTab === 'contracts' ? 'on' : ''} onClick={() => setPortTab('contracts')}>
-              Contracts
-            </button>
+            {(['market', 'crew', 'contracts'] as PortTab[]).map((t) => (
+              <button className={ui.portTab === t ? 'on' : ''} key={t} onClick={() => setPortTab(t)}>
+                {t === 'market' ? 'Market' : t === 'crew' ? 'Crew' : 'Contracts'}
+                {attention[t] > 0 && <i className="segdot" />}
+              </button>
+            ))}
           </div>
 
           {ui.portTab === 'market' && (
@@ -973,7 +950,15 @@ export function RunView() {
       <nav className="tabbar">
         {(
           [
-            { id: 'port', label: 'PORT', icon: 'PORT', badge: portBadge ? String(portBadge) : '', red: false },
+            {
+              id: 'port',
+              label: 'PORT',
+              icon: 'PORT',
+              badge: attention.market + attention.crew + attention.contracts
+                ? String(attention.market + attention.crew + attention.contracts)
+                : '',
+              red: false
+            },
             { id: 'deck', label: 'DECK', icon: 'GRIDX', badge: bad.length ? String(bad.length) : '', red: true },
             { id: 'lanes', label: 'LANES', icon: 'ROUTE', badge: '', red: false },
             { id: 'chart', label: 'CHART', icon: 'WARP', badge: '', red: false }

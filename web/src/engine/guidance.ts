@@ -1,5 +1,5 @@
 import { HIRES, MOD } from './data'
-import { capacity, deckCrew, evaluate, massOf, modOf, souls } from './core'
+import { capacity, deckCrew, evaluate, fuelCap, massOf, modOf, souls, surcharge } from './core'
 import { coord, here } from './actions'
 import { R } from './state'
 import type { HireId, ModCode } from './types'
@@ -76,60 +76,167 @@ export function whyHire(id: HireId): Why {
   return { need: 1, s: `${c.short} at ${coord(R.nodes[c.at])} will not load without one${hireStrain()}` }
 }
 
+/* What tapping the directive should do. Plain data so the UI (and actions.ts)
+   can run it without guidance importing either — no import cycles. */
+export type OrderAct =
+  | { kind: 'tab'; tab: 'deck' | 'lanes' | 'chart' }
+  | { kind: 'port'; portTab: 'market' | 'crew' | 'contracts' }
+  | { kind: 'course'; to: number }
+  | { kind: 'fixDeck'; bays: number[]; bay: number | null }
+  | { kind: 'none' }
+
 export interface Orders {
   k: 'do' | 'bad' | 'buy' | 'go'
   t: string
   s: string
+  act: OrderAct
+  /** short label for the directive's button */
+  cta: string
+}
+
+/** The nearest node with a warp point, or null when the sector has none. */
+function nearestWarp(): number | null {
+  const warps = R.nodes.filter((x) => x.warp).map((x) => x.id)
+  if (!warps.length) return null
+  return warps.sort((a, b) => R.D![R.at][a] - R.D![R.at][b])[0]
+}
+
+/** Send the player at a distant node: plot the course if it is more than one
+    hop, otherwise just open the lanes where the burn already sits. */
+function goTo(to: number): { act: OrderAct; cta: string } {
+  if (to === R.at) return { act: { kind: 'tab', tab: 'lanes' }, cta: 'Show the lanes' }
+  const adjacent = R.adj![R.at].some((e) => e.to === to)
+  if (adjacent) return { act: { kind: 'tab', tab: 'lanes' }, cta: 'Show the lanes' }
+  return { act: { kind: 'course', to }, cta: 'Set course' }
 }
 
 export function orders(): Orders {
   const n = here(),
     res = evaluate(R.grid),
     bad = res.checks.filter((c) => !c.ok)
+
   if (R.hold.length) {
     const m = modOf(R.hold[0])!
     if (!R.grid.includes(null))
       return {
         k: 'bad',
         t: 'The hold is full and no bay is clear.',
-        s: 'Pawn or dump something — you cannot burn with kit loose in the hold.'
+        s: 'Pawn or dump something — you cannot burn with kit loose in the hold.',
+        act: { kind: 'tab', tab: 'deck' },
+        cta: 'Open the deck'
       }
-    return { k: 'do', t: `Stow the ${m.short.toLowerCase()} in a clear bay.`, s: 'Tap it in the hold, then tap an empty bay.' }
+    return {
+      k: 'do',
+      t: `Stow the ${m.short.toLowerCase()} in a clear bay.`,
+      s: 'Tap it in the hold, then tap an empty bay.',
+      act: { kind: 'tab', tab: 'deck' },
+      cta: 'Stow it'
+    }
   }
-  if (bad.length)
-    return { k: 'bad', t: `Deck fails inspection: ${bad[0].lb.toLowerCase()}.`, s: bad[0].dt + ' You cannot burn until it clears.' }
+
+  if (bad.length) {
+    const f = bad[0]
+    const live = f.focus.filter((i) => i >= 0)
+    // a positional failure is fixed by moving something, so hand the player the
+    // offending bay already selected; anything else is fixed at the market
+    if (f.pos && live.length)
+      return {
+        k: 'bad',
+        t: `Deck fails inspection: ${f.lb.toLowerCase()}.`,
+        s: f.dt + ' You cannot burn until it clears.',
+        act: { kind: 'fixDeck', bays: live, bay: live[0] },
+        cta: 'Fix the bay'
+      }
+    return {
+      k: 'bad',
+      t: `Deck fails inspection: ${f.lb.toLowerCase()}.`,
+      s: f.dt + ' You cannot burn until it clears.',
+      act: n.stock.length ? { kind: 'port', portTab: 'market' } : { kind: 'tab', tab: 'deck' },
+      cta: n.stock.length ? 'Open the market' : 'Show the bays'
+    }
+  }
+
+  // fuel is the clock: if this rock sells it and the tanks are low, say so
+  const cheapest = R.adj![R.at].length ? Math.min(...R.adj![R.at].map((e) => e.cost)) + surcharge() : 0
+  const thin = R.fuel < cheapest * 2 || R.fuel <= 4
+  if (n.fuel && thin && R.credits >= n.fuel && fuelCap() > R.fuel)
+    return {
+      k: 'buy',
+      t: `Fuel is low and this rock sells it.`,
+      s: `${R.fuel} of ${fuelCap()} aboard at ${n.fuel} a unit. The cheapest lane out costs ${cheapest}.`,
+      act: { kind: 'port', portTab: 'market' },
+      cta: 'Buy fuel'
+    }
+
   const avail = R.cargo.filter((c) => !c.taken && !c.done && c.at === R.at)
   const open = avail.filter((c) => !(c.need && !R.specs.includes(c.need)))
   if (open.length && R.grid.includes(null))
     return {
       k: 'do',
       t: `${open[0].short} is on offer here.`,
-      s: `${coord(R.nodes[open[0].to])}, pays ${open[0].fee}. ${open[0].rule}`
+      s: `${coord(R.nodes[open[0].to])}, pays ${open[0].fee}. ${open[0].rule}`,
+      act: { kind: 'port', portTab: 'contracts' },
+      cta: 'Open contracts'
     }
+
   const gate = avail.find((c) => c.need && !R.specs.includes(c.need))
   if (gate)
     return {
       k: 'buy',
       t: `${gate.short} needs a ${HIRES[gate.need!].name.toLowerCase()}.`,
-      s: n.hires.includes(gate.need!) ? 'One is hiring here.' : 'None hiring here.'
+      s: n.hires.includes(gate.need!) ? 'One is hiring here.' : 'None hiring here.',
+      act: n.hires.includes(gate.need!) ? { kind: 'port', portTab: 'crew' } : { kind: 'tab', tab: 'chart' },
+      cta: n.hires.includes(gate.need!) ? 'Open the hall' : 'Show the chart'
     }
+
   const gap = R.grid.includes(null) ? n.stock.find((k) => whyMod(k).need && R.credits >= MOD[k].price) : undefined
-  if (gap) return { k: 'buy', t: `Buy a ${MOD[gap].short.toLowerCase()} here.`, s: `${whyMod(gap).s}. ${MOD[gap].price} credits.` }
+  if (gap)
+    return {
+      k: 'buy',
+      t: `Buy a ${MOD[gap].short.toLowerCase()} here.`,
+      s: `${whyMod(gap).s}. ${MOD[gap].price} credits.`,
+      act: { kind: 'port', portTab: 'market' },
+      cta: 'Open the market'
+    }
+
   const carrying = R.cargo.filter((c) => c.aboard)
-  if (carrying.length)
+  if (carrying.length) {
+    const c = carrying.slice().sort((a, b) => R.D![R.at][a.to] - R.D![R.at][b.to])[0]
+    const g = goTo(c.to)
     return {
       k: 'go',
-      t: `Run ${carrying[0].short} to ${coord(R.nodes[carrying[0].to])}.`,
-      s: `${carrying.length} aboard. Profit so far ${R.credits - R.opening}.`
+      t: `Run ${c.short} to ${coord(R.nodes[c.to])}.`,
+      s: `${carrying.length} aboard, ${R.D![R.at][c.to]} fuel of lanes away. Profit so far ${R.credits - R.opening}.`,
+      ...g
     }
+  }
+
   if (n.warp)
-    return { k: 'go', t: 'You are standing on a warp point.', s: `Jump out for ${R.warpCost} fuel, or keep working this sector.` }
-  const free = R.cargo.filter((c) => !c.taken && !c.done)
-  if (free.length)
     return {
       k: 'go',
-      t: `${free[0].short} is waiting at ${coord(R.nodes[free[0].at])}.`,
-      s: `Pays ${free[0].fee}. Profit so far ${R.credits - R.opening}.`
+      t: 'You are standing on a warp point.',
+      s: `Jump out for ${R.warpCost} fuel, or keep working this sector.`,
+      act: { kind: 'tab', tab: 'lanes' },
+      cta: 'Warp out'
     }
-  return { k: 'go', t: 'Nothing left worth taking.', s: 'Make for a warp point and jump out.' }
+
+  const free = R.cargo.filter((c) => !c.taken && !c.done)
+  if (free.length) {
+    const c = free.slice().sort((a, b) => R.D![R.at][a.at] - R.D![R.at][b.at])[0]
+    const g = goTo(c.at)
+    return {
+      k: 'go',
+      t: `${c.short} is waiting at ${coord(R.nodes[c.at])}.`,
+      s: `Pays ${c.fee}, ${R.D![R.at][c.at]} fuel of lanes away. Profit so far ${R.credits - R.opening}.`,
+      ...g
+    }
+  }
+
+  const w = nearestWarp()
+  return {
+    k: 'go',
+    t: 'Nothing left worth taking.',
+    s: 'Make for a warp point and jump out.',
+    ...(w === null ? { act: { kind: 'tab' as const, tab: 'chart' as const }, cta: 'Show the chart' } : goTo(w))
+  }
 }

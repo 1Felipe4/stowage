@@ -5,6 +5,7 @@ import { makeSeed } from './rng'
 import { R, emit, setR, ui } from './state'
 import { HULLS } from './data'
 import type { Edge, GameState, HireId, ModCode, NodeT } from './types'
+import type { OrderAct } from './guidance'
 import { clearRemoteSave, scheduleSave } from '../net/saves'
 import { recordScore } from '../net/scores'
 import { clearCourse, courseArrived, setCourse } from './course'
@@ -104,9 +105,9 @@ export function jump(e: Edge) {
   if (!R.visited.includes(e.b)) R.visited.push(e.b)
   ui.sel = null
   ui.focus = []
-  ui.tab = 'port' // arriving somewhere new — show what the rock offers
-  ui.portTab = 'market'
   ui.confirm = null
+  // stay on whatever pane the player was reading — the directive and the tab
+  // badges say what changed, so we never yank the view out from under them
   courseArrived()
   rollEvent()
   say(`Burned ${cost} to ${coord(here())}.`)
@@ -144,7 +145,8 @@ export function accept(i: number) {
   c.aboard = true
   R.hold.push('@' + i)
   R.accepted.push(i)
-  ui.tab = 'deck' // the crate is in the hold — go stow it
+  // pre-select it so the next bay tap stows it, but leave the player where
+  // they are — the DECK badge and the directive both flag the loose crate
   ui.sel = { t: 'hold', n: R.hold.length - 1 }
   say(`${c.short} signed for, bound for ${coord(R.nodes[c.to])}.`)
   touch()
@@ -462,6 +464,31 @@ export function confirmJump() {
   ui.confirm = null
   if (e) jump(e) // jump re-guards fuel and inspection itself
   else emit()
+}
+
+/** Run whatever the directive is pointing at. */
+export function runOrder(act: OrderAct) {
+  switch (act.kind) {
+    case 'tab':
+      ui.tab = act.tab
+      break
+    case 'port':
+      ui.tab = 'port'
+      ui.portTab = act.portTab
+      break
+    case 'course':
+      plotCourse(act.to)
+      return // plotCourse emits
+    case 'fixDeck':
+      ui.tab = 'deck'
+      ui.focus = act.bays
+      // hand them the offending module already picked up, so one more tap moves it
+      ui.sel = act.bay !== null && R.grid[act.bay] ? { t: 'bay', i: act.bay } : null
+      break
+    case 'none':
+      break
+  }
+  emit()
 }
 
 export function toggleFocus(live: number[]) {

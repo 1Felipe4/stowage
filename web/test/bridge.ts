@@ -46,6 +46,8 @@ cancelJump()
 ck('cancel moves nothing', ui.confirm === null && R.at === before.at && R.fuel === before.fuel)
 
 askJump(e0.b)
+ui.tab = 'chart'
+const tabBeforeJump = ui.tab
 confirmJump()
 ck('confirm actually travels', R.at === e0.b, `at=${coord(here())}`)
 // travel rolls an event, and 'fuel siphoned' takes 2 more — so the lane cost
@@ -53,7 +55,8 @@ ck('confirm actually travels', R.at === e0.b, `at=${coord(here())}`)
 ck('confirm spends at least the lane cost', R.fuel <= before.fuel - e0.cost, `fuel=${R.fuel} was ${before.fuel} lane=${e0.cost}`)
 ck('confirm spends no more than lane + event', R.fuel >= before.fuel - e0.cost - 2, `fuel=${R.fuel}`)
 ck('confirm clears the overlay', ui.confirm === null)
-ck('arriving opens the port pane', ui.tab === 'port' && ui.portTab === 'market')
+// travel must NOT move the player between panes any more
+ck('arriving keeps the pane the player was on', ui.tab === tabBeforeJump, `tab=${ui.tab} was ${tabBeforeJump}`)
 
 // non-adjacent node must be refused with a reason
 const far = R.nodes.find(n => n.id !== R.at && !outEdges().some(e => e.b === n.id))!
