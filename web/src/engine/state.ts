@@ -14,6 +14,18 @@ export type Sel = { t: 'bay'; i: number } | { t: 'hold'; n: number }
 export type Tab = 'port' | 'deck' | 'lanes' | 'chart'
 export type PortTab = 'market' | 'crew' | 'contracts' | 'ships'
 
+/** What the detail sheet is showing. `id` is a bay/hold/crew index, a module
+    or hull code, a cargo index, or a check label. */
+export type Detail =
+  | { k: 'mod'; id: string }
+  | { k: 'bay'; id: number }
+  | { k: 'hold'; id: number }
+  | { k: 'crew'; id: number }
+  | { k: 'hire'; id: string }
+  | { k: 'cargo'; id: number }
+  | { k: 'check'; id: string }
+  | { k: 'ship'; id: string }
+
 /** A plotted burn awaiting confirmation. Nothing moves until confirmed. */
 export interface JumpPlan {
   to: number
@@ -41,6 +53,8 @@ export interface UiState {
   confirm: JumpPlan | null
   /** plotted destination node id — advisory course, see engine/course.ts */
   course: number | null
+  /** the open detail sheet, or null */
+  detail: Detail | null
 }
 
 export const ui: UiState = {
@@ -53,7 +67,8 @@ export const ui: UiState = {
   tab: 'deck',
   portTab: 'market',
   confirm: null,
-  course: null
+  course: null,
+  detail: null
 }
 
 let version = 0

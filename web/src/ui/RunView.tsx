@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   accept, askJump, buyFuel, buyMod, callIt, cancelJump, confirmJump, coord, doWarp, dropCourse, here, hire, jettison,
-  outEdges, payOff, plotCourse, runOrder, scuttle, sellMod, sellRate, sellValue, shipOK, shipPrice, stuckReason, tapBay,
-  tapHold, toggleFocus, tradeIn, buyShip
+  outEdges, openDetail, payOff, plotCourse, runOrder, scuttle, sellMod, sellRate, sellValue, shipOK, shipPrice,
+  stuckReason, tapBay, tapHold, toggleFocus, tradeIn, buyShip
 } from '../engine/actions'
 import { blocked, coverage, evaluate, fuelCap, laneCost, laneFuel as laneFuelOf, massOf, modOf, souls, surcharge } from '../engine/core'
 import { courseInfo } from '../engine/course'
@@ -10,9 +10,11 @@ import { HIRES, HULLS, KINDS, MOD, TILES, bayName } from '../engine/data'
 import { orders, whyHire, whyMod, type Why } from '../engine/guidance'
 import { R, emit, ui, type PortTab, type Tab } from '../engine/state'
 import { TUT } from '../engine/teach'
-import type { Cargo, Check, ModCode } from '../engine/types'
-import { chartSvg } from './Chart'
+import type { Cargo, ModCode } from '../engine/types'
+import { ChartView } from './ChartView'
+import { DetailSheet } from './DetailSheet'
 import { Icon } from './Icon'
+import { useDrag } from './useDrag'
 
 function setTab(t: Tab) {
   ui.tab = t
@@ -196,6 +198,12 @@ export function RunView() {
   const mass = massOf()
   const overMass = Math.max(0, mass - cov.capM)
   const stowedBays = R.grid.filter(Boolean).length
+  // dragging moves and swaps; a long press opens the detail sheet instead
+  const startDrag = useDrag((src) => {
+    const k = src.t === 'bay' ? R.grid[src.i] : R.hold[src.n]
+    const m = modOf(k)
+    return `<span class="ghosticon">${m ? m.short : '?'}</span>`
+  })
   const course = courseInfo()
   const crewLine = cov.hands
     ? `${cov.hands} hand${cov.hands > 1 ? 's' : ''} run${cov.hands > 1 ? '' : 's'} ${cov.capM} mass · ` +
@@ -248,13 +256,6 @@ export function RunView() {
   const warpWhy = n.warp ? (!shipOK() ? 'DECK FAILS INSPECTION' : R.fuel < R.warpCost ? `NEED ${R.warpCost} FUEL` : null) : null
   const forf = R.cargo.filter((c) => c.taken && !c.done)
 
-  function checkTap(c: Check) {
-    const live = c.focus.filter((i) => i >= 0)
-    if (!live.length) return
-    toggleFocus(live)
-    setTab('deck')
-    gridRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }
 
   /* Attention per port sub-tab, so the tab bar can say which one to open. */
   const attention: Record<PortTab, number> = {
@@ -479,7 +480,7 @@ export function RunView() {
                 const locked = !!(HIRES[id].spec && R.cargo.some((c) => c.aboard && c.need === HIRES[id].spec))
                 return (
                   <div className="row" key={'crew' + i}>
-                    <div className="l">
+                    <div className="l tapinfo" onClick={() => openDetail({ k: 'crew', id: i })}>
                       <Icon k="CREW" />
                       <div style={{ minWidth: 0 }}>
                         <div className="nm">{HIRES[id].name}</div>
@@ -504,7 +505,7 @@ export function RunView() {
                   const hh = HIRES[id]
                   return (
                     <div className={'row' + (w.need ? ' want' : '')} key={'hire' + id + ix}>
-                      <div className="l">
+                      <div className="l tapinfo" onClick={() => openDetail({ k: 'hire', id })}>
                         <Icon k="CREW" />
                         <div style={{ minWidth: 0 }}>
                           <div className="nm">
@@ -545,7 +546,7 @@ export function RunView() {
                 const mine = h.id === R.hull.id
                 return (
                   <div className="shipcard" key={id}>
-                    <div className="sh">
+                    <div className="sh tapinfo" onClick={() => openDetail({ k: 'ship', id })}>
                       <ShipShape hull={h} />
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div className="snm">{h.name}</div>
@@ -696,6 +697,9 @@ export function RunView() {
                     className={cls}
                     key={i}
                     tabIndex={0}
+                    data-bay={i}
+                    data-empty={k ? '0' : '1'}
+                    onPointerDown={(e) => k && startDrag(e, { t: 'bay', i }, { k: 'bay', id: i })}
                     title={
                       mm
                         ? `${mm.name} at ${bayName(i)} — heat ${ht}` +
@@ -747,6 +751,7 @@ export function RunView() {
                       <button
                         className={'chip' + (ui.sel && ui.sel.t === 'hold' && ui.sel.n === i ? ' sel' : '')}
                         key={'hold' + i}
+                        onPointerDown={(e) => startDrag(e, { t: 'hold', n: i }, { k: 'hold', id: i })}
                         onClick={() => tapHold(i)}
                       >
                         <Icon k={mm.icon} />
@@ -798,7 +803,7 @@ export function RunView() {
               {sortedChecks.map((c) => {
                 const live = c.focus.filter((i) => i >= 0)
                 return (
-                  <div className={'chk' + (c.ok ? '' : ' no')} key={c.lb + c.dt} onClick={() => !c.ok && checkTap(c)}>
+                  <div className={'chk' + (c.ok ? '' : ' no')} key={c.lb + c.dt} onClick={() => openDetail({ k: 'check', id: c.lb })}>
                     <Icon k={c.ok ? 'CHECK' : 'X'} />
                     <div style={{ minWidth: 0 }}>
                       <div className="lb">
@@ -995,15 +1000,7 @@ export function RunView() {
                 <div style={{ flex: 1 }} />
                 <div className="plan">PLAN {R.seed}</div>
               </div>
-              <div
-                className="chartcard"
-                onClick={(e) => {
-                  const g = (e.target as Element).closest?.('[data-nd]')
-                  const id = g?.getAttribute('data-nd')
-                  if (id !== null && id !== undefined) askJump(+id)
-                }}
-                dangerouslySetInnerHTML={{ __html: chartSvg() }}
-              />
+              <ChartView />
               <div className="legend">
                 <span className="pt">+ work on offer</span>
                 <span className="en">→ drop, aboard now</span>
@@ -1056,6 +1053,7 @@ export function RunView() {
       </nav>
 
       {ui.confirm && <ConfirmBurn />}
+      {ui.detail && <DetailSheet />}
     </>
   )
 }

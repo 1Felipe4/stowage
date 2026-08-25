@@ -46,6 +46,8 @@ can land later without re-architecting.
   ids, modules stranded in cells a hull lacks, over-cap fuel, and junk input.
 - `npx tsx web/test/rating.ts` — star bands either side of par, including a
   zero/negative par and a run that beats it.
+- `npx tsx web/test/detail.ts` — drop semantics (move, swap, self, blocked cell,
+  hold-to-bay) and that the detail sheet opens and closes for every entity.
 
 Note the pilot is **noisy**: travel events use unseeded randomness, so 15-run
 samples swing ~10 points. Use 40+ runs before believing a winnability number.
@@ -109,6 +111,22 @@ not have, so each ship is a different shape to solve:
   generator promised plans a 14-bay deck could not physically hold.
 - Saves re-resolve `hull` by id from `HULLS` on load, so balance changes reach
   old saves instead of a frozen copy travelling forward.
+
+## Handling the deck
+
+- **Drag to stow** (`ui/useDrag.ts`): pointer drag from a bay or hold chip onto
+  a bay. Dropping on a clear bay moves, on a full one swaps, on a blocked cell
+  does nothing. A press-and-hold of 480ms without moving opens the detail sheet
+  instead. Listeners live on `window` so a drag survives leaving the tile, and
+  bay tiles carry `data-bay`/`data-empty` for hit-testing. Tap-then-tap still
+  works — drag is an addition, not a replacement.
+- **Detail sheet** (`ui/DetailSheet.tsx`): one modal for every entity — market
+  module, bay, hold item, crew, hire, contract, inspection check, hull. Each
+  answers what it is, what it means for this deck, and what you can do about it
+  (chips, lines, actions). `ui.detail` drives it.
+- **Chart zoom** (`ui/ChartView.tsx`): wheel, pinch, drag-to-pan when zoomed,
+  double-tap to toggle, clamped 1-4x. Zoom lives in a ref, never state — putting
+  it in state re-renders the SVG on every pointer move.
 
 ## Par, not a ceiling
 

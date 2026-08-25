@@ -1,5 +1,5 @@
 import { HIRES, MOD, TILES, bayName } from './data'
-import { evaluate, fuelCap, laneCost, laneFuel, surcharge } from './core'
+import { blocked as blockedCell, evaluate, fuelCap, laneCost, laneFuel, surcharge } from './core'
 import { genStage } from './gen'
 import { makeSeed } from './rng'
 import { R, emit, ui } from './state'
@@ -510,6 +510,36 @@ export function confirmJump() {
   ui.confirm = null
   if (e) jump(e) // jump re-guards fuel and inspection itself
   else emit()
+}
+
+export function openDetail(d: import('./state').Detail) {
+  ui.detail = d
+  emit()
+}
+
+export function closeDetail() {
+  ui.detail = null
+  emit()
+}
+
+/** Drag-and-drop: put whatever was dragged into bay `i`. Dropping onto an
+    occupied bay swaps the two, which is how you rearrange a packed deck. */
+export function dropOn(src: { t: 'bay'; i: number } | { t: 'hold'; n: number }, i: number) {
+  if (blockedCell(i)) return
+  if (src.t === 'hold') {
+    if (R.grid[i]) return
+    const item = R.hold.splice(src.n, 1)[0]
+    R.grid[i] = item
+    if (item[0] === '@') dropOff() // stowing at its destination delivers it
+  } else {
+    if (src.i === i) return
+    const t = R.grid[i]
+    R.grid[i] = R.grid[src.i]
+    R.grid[src.i] = t
+  }
+  ui.sel = null
+  ui.focus = []
+  touch()
 }
 
 /** Run whatever the directive is pointing at. */
