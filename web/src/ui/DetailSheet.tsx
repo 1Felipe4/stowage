@@ -48,22 +48,25 @@ const act = (label: string, icon: string, kind: Act['kind'], run: () => void): A
 function modChips(k: ModCode): Chip[] {
   const m = MOD[k]
   const out: Chip[] = []
-  if (m.power > 0) out.push(chip('BAT', `+${m.power} power`, 'green', 'makes power'))
-  if (m.power < 0) out.push(chip('BAT', `${m.power} power`, 'red', 'draws power'))
-  if (m.heat) out.push(chip('ALERT', `+${m.heat} heat`, 'amber', 'runs this hot in its own bay'))
-  if (m.spill) out.push(chip('RCT', `spills ${m.spill}`, 'amber', 'pushes this into each touching bay'))
-  if (m.cool) out.push(chip('CRY', `cools ${m.cool}`, 'blue', 'pulls this out of each touching bay'))
-  if (m.fuel) out.push(chip('TNK', `holds ${m.fuel}`, 'blue', 'fuel capacity'))
-  if (k === 'THR') out.push(chip('MASS', 'no mass, +4 cap', 'green', 'thrust cancels its own weight'))
+  if (m.power > 0) out.push(chip('POWER', `+${m.power}`, 'pow', `${m.power} power made`))
+  if (m.power < 0) out.push(chip('POWER', String(m.power), 'drw', `${-m.power} power drawn`))
+  if (m.heat) out.push(chip('HEAT', `+${m.heat}`, 'hot', `runs at +${m.heat} heat`))
+  if (m.spill) out.push(chip('SPILL', `+${m.spill}`, 'hot', `+${m.spill} heat into every touching bay`))
+  if (m.cool) out.push(chip('COLD', `-${m.cool}`, 'cold', `pulls ${m.cool} heat from touching bays`))
+  if (m.fuel) out.push(chip('TNK', `+${m.fuel}`, 'cold', `holds ${m.fuel} fuel`))
+  if (k === 'THR') out.push(chip('LIFT', '+4', 'pow', 'lifts 4 more mass and weighs nothing'))
+  if (k === 'LSP') out.push(chip('AIR', '2', 'soul', 'air for 2 souls'))
+  if (k === 'BRT') out.push(chip('BUNK', '2', 'soul', 'sleeps 2'))
+  if (k === 'SHD') out.push(chip('SHIELDOK', '', 'cold', 'boxes in a hot neighbour, contains volatile cargo'))
   return out
 }
 
 function kindChips(kind: keyof typeof KINDS): Chip[] {
   const kd = KINDS[kind]
-  const out: Chip[] = [chip('MASS', `weighs ${kd.weight}`, kd.weight > 1 ? 'amber' : '', 'mass on the deck')]
-  if (kd.support) out.push(chip(kd.support, `needs ${MOD[kd.support].short.toLowerCase()}`, 'amber', 'support module required'))
-  if (kd.crew) out.push(chip('CREW', `${kd.crew} tenders`, 'amber', 'souls needed to work it'))
-  out.push(chip('COINS', `pays ×${kd.pay}`, 'green', 'fee multiplier for this kind'))
+  const out: Chip[] = [chip('MASS', String(kd.weight), kd.weight > 1 ? 'drw' : 'mass', `weighs ${kd.weight} on the deck`)]
+  if (kd.support) out.push(chip(kd.support, MOD[kd.support].short.toLowerCase(), 'cold', 'support module required alongside'))
+  if (kd.crew) out.push(chip('SOULS', String(kd.crew), 'soul', `${kd.crew} tenders needed to work it`))
+  out.push(chip('COINS', `×${kd.pay}`, 'cred', 'fee multiplier for this kind'))
   return out
 }
 
@@ -122,7 +125,7 @@ function build(): Sheet | null {
       title: m.cargo?.goods ? `${m.cargo.short} · ${m.cargo.goods}` : m.name,
       chips: [
         ...(m.cargo ? kindChips(m.cargo.kind) : modChips(k as ModCode)),
-        chip('ALERT', `${hv > 0 ? '+' : ''}${hv}`, hv > cap ? 'red' : hv > 0 ? 'amber' : 'blue', `this bay reads ${hv} of ${cap}`)
+        chip('HEAT', `${hv > 0 ? '+' : ''}${hv}`, hv > cap ? 'hot' : hv > 0 ? 'drw' : 'cold', `this bay reads ${hv} of ${cap}`)
       ],
       lines: [
         line(m.icon, m.cargo ? m.cargo.rule : m.blurb ?? ''),
@@ -186,8 +189,8 @@ function build(): Sheet | null {
       kicker: 'ABOARD',
       title: h.name,
       chips: [
-        chip('MASS', h.deck ? 'runs 4 mass' : 'no deck work', h.deck ? 'green' : '', 'deck capacity this soul provides'),
-        chip('COINS', `${R.wage} wages`, 'amber', 'paid at every warp')
+        chip('MASS', h.deck ? '4 mass' : 'no deck', h.deck ? 'pow' : 'mass', 'deck capacity this soul provides'),
+        chip('COINS', String(R.wage), 'cred', 'wages paid at every warp')
       ],
       lines: [
         line('CREW', h.blurb, 'blue'),
@@ -214,9 +217,9 @@ function build(): Sheet | null {
       kicker: 'HIRING HALL',
       title: h.name,
       chips: [
-        chip('COINS', `${h.price} to sign`, 'amber', 'one-off fee'),
-        chip('COINS', `${R.wage} a warp`, 'amber', 'recurring wages'),
-        ...(h.deck ? [chip('MASS', 'runs 4 mass', 'green', 'deck capacity')] : [])
+        chip('COINS', String(h.price), 'cred', 'one-off fee to sign'),
+        chip('PAYOUT', `${R.wage}/warp`, 'drw', 'recurring wages'),
+        ...(h.deck ? [chip('MASS', '4 mass', 'pow', 'deck capacity this soul provides')] : [])
       ],
       lines: [
         line('CREW', h.blurb, 'blue'),
@@ -246,8 +249,8 @@ function build(): Sheet | null {
       title: c.goods ? `${c.short} · ${c.goods}` : c.short,
       chips: [
         ...kindChips(c.kind),
-        chip('COINS', `+${c.fee}`, 'green', 'fee on delivery'),
-        chip('ROUTE', `${coord(R.nodes[c.at])}→${coord(R.nodes[c.to])}`, 'blue', 'pickup and destination')
+        chip('PAYOUT', `+${c.fee}`, 'cred', 'fee on delivery'),
+        chip('ROUTE', `${coord(R.nodes[c.at])}→${coord(R.nodes[c.to])}`, 'cold', 'pickup and destination')
       ],
       lines: [
         line('CARGO', `${c.name}. ${c.rule}`, 'amber'),
@@ -302,10 +305,10 @@ function build(): Sheet | null {
       kicker: mine ? 'YOUR HULL' : 'FOR SALE HERE',
       title: h.name,
       chips: [
-        chip('GRIDX', `${20 - h.blocked.length} bays`, 'blue', 'usable bays on this hull'),
-        chip('MASS', `base ${h.base}`, 'blue', 'capacity before engines'),
-        chip('ALERT', `heat cap ${h.heatCap}`, h.heatCap > 5 ? 'green' : '', 'the hottest a bay may read'),
-        chip('TNK', `fuel ×${h.fuelMult}`, h.fuelMult < 1 ? 'green' : h.fuelMult > 1 ? 'amber' : '', 'lane fuel multiplier')
+        chip('GRIDX', `${20 - h.blocked.length}`, 'cold', 'usable bays on this hull'),
+        chip('MASS', `base ${h.base}`, 'mass', 'capacity before engines'),
+        chip('HEAT', String(h.heatCap), h.heatCap > 5 ? 'pow' : 'hot', 'the hottest a bay may read'),
+        chip('FUEL', `×${h.fuelMult}`, h.fuelMult < 1 ? 'pow' : h.fuelMult > 1 ? 'drw' : 'mass', 'lane fuel multiplier')
       ],
       lines: [
         line('THR', h.blurb),

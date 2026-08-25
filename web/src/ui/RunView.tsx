@@ -180,6 +180,24 @@ function ConfirmBurn() {
   )
 }
 
+/* Each inspection check reads as its own subject, not a generic row. */
+const SUBJ: Record<string, { icon: string; cls: string }> = {
+  'ALL STOWED': { icon: 'INBOX', cls: 'mass' },
+  POWER: { icon: 'POWER', cls: 'pow' },
+  HEAT: { icon: 'HEAT', cls: 'hot' },
+  THRUST: { icon: 'THR', cls: 'cold' },
+  BUNKS: { icon: 'BUNK', cls: 'soul' },
+  'LIFE SUPPORT': { icon: 'AIR', cls: 'soul' },
+  'FUEL TANKS': { icon: 'TNK', cls: 'cold' }
+}
+
+/** How full the tile's gauge reads: "a/b" where possible, else pass/fail. */
+function gauge(vl: string, ok: boolean): number {
+  const m = /^(\d+)\/(\d+)$/.exec(vl)
+  if (m) return +m[2] ? Math.max(0.06, Math.min(1, +m[1] / +m[2])) : ok ? 1 : 0
+  return ok ? 1 : 0.4
+}
+
 const SUPPORT_TEXT: Record<string, string> = {
   SHD: 'needs shielding on every touching bay',
   CRY: 'needs a cryo unit alongside',
@@ -373,7 +391,15 @@ export function RunView() {
             </div>
           )}
           {tutDone && <div className="kick">TUTORIAL · DONE</div>}
-          <div className="dt">{tutStep ? tutStep.title : tutDone ? 'That is the whole game.' : o.t}</div>
+          <div className="dt">
+            {!tutStep && !tutDone && o.k === 'bad' && bad[0] ? (
+              <span className="dsubj">
+                <Icon k={(SUBJ[bad[0].lb] ?? { icon: 'ALERT' }).icon} />
+                {bad[0].vl ? <b>{bad[0].vl}</b> : null}
+              </span>
+            ) : null}
+            {tutStep ? tutStep.title : tutDone ? 'That is the whole game.' : o.t}
+          </div>
           <div className="ds">
             {tutStep
               ? tutStep.body
@@ -691,7 +717,6 @@ export function RunView() {
                 ]
                   .filter(Boolean)
                   .join(' ')
-                const htCls = over ? 'over' : ht >= 3 ? 'warm' : ht < 0 ? 'chill' : ''
                 return (
                   <div
                     className={cls}
@@ -714,20 +739,30 @@ export function RunView() {
                       }
                     }}
                   >
+                    {/* heat reads as a column of pips and a wash of colour, so a
+                        hot deck is legible at a glance rather than by arithmetic */}
+                    {ht !== 0 && k ? <span className={'tint ' + (ht > 0 ? (over ? 'over' : 'warm') : 'cool')} /> : null}
                     <span className="bayn">{bayName(i)}</span>
-                    <span className={'ht ' + htCls}>
-                      {ht > 0 ? '+' : ''}
-                      {ht}
-                    </span>
+                    {k ? (
+                      <span className="pips">
+                        {Array.from({ length: R.hull.heatCap }, (_, n) => {
+                          const lvl = R.hull.heatCap - n
+                          const on = ht > 0 && lvl <= Math.min(ht, R.hull.heatCap)
+                          const cool = ht < 0 && lvl === 1
+                          return <i className={on ? (over ? 'over' : ht >= 4 ? 'warm' : 'lit') : cool ? 'cool' : ''} key={n} />
+                        })}
+                      </span>
+                    ) : null}
                     {mm ? (
                       <>
-                        <Icon k={mm.icon} />
-                        <span className="code">{mm.short}</span>
+                        <Icon k={mm.icon} cls={mm.cargo ? 'cred' : k === 'RCT' ? 'cred' : k === 'CRY' || k === 'RAD' ? 'cold' : ''} />
+                        <span className="code">{mm.cargo ? mm.short.slice(-1) : mm.short}</span>
+                        {over ? <span className="overbadge">+{ht - R.hull.heatCap}</span> : null}
                         {idle ? <span className="nohand">NO HAND</span> : null}
                       </>
                     ) : (
                       <>
-                        <Icon k={placing ? 'PLUS' : 'MINUS'} />
+                        <Icon k={placing ? 'PLUS' : 'EMPTY'} />
                         <span className="code">{placing ? 'STOW' : 'clear'}</span>
                       </>
                     )}
@@ -799,20 +834,26 @@ export function RunView() {
               </div>
             )}
 
-            <div className="checks">
+            <div className="checktiles">
               {sortedChecks.map((c) => {
-                const live = c.focus.filter((i) => i >= 0)
+                const subj = SUBJ[c.lb] ?? { icon: 'CARGO', cls: 'cred' }
                 return (
-                  <div className={'chk' + (c.ok ? '' : ' no')} key={c.lb + c.dt} onClick={() => openDetail({ k: 'check', id: c.lb })}>
-                    <Icon k={c.ok ? 'CHECK' : 'X'} />
-                    <div style={{ minWidth: 0 }}>
-                      <div className="lb">
-                        {c.lb}
-                        {!c.ok && live.length ? <i className="tagpill blue">SHOW</i> : null}
-                      </div>
-                      <div className="dt">{c.dt}</div>
-                    </div>
-                  </div>
+                  <button
+                    className={'ctile ' + (c.ok ? 'ok' : 'no')}
+                    key={c.lb + c.dt}
+                    title={`${c.lb} — ${c.dt}`}
+                    onClick={() => openDetail({ k: 'check', id: c.lb })}
+                  >
+                    <Icon k={subj.icon} cls={c.ok ? subj.cls : 'hot'} />
+                    <span className="cbar">
+                      <i
+                        className={c.ok ? (c.lb === 'HEAT' ? 'warm' : 'good') : 'bad'}
+                        style={{ width: `${Math.round(gauge(c.vl, c.ok) * 100)}%` }}
+                      />
+                    </span>
+                    <span className="cvl">{c.vl || (c.ok ? 'ok' : '!')}</span>
+                    <Icon k={c.ok ? 'CHECK' : 'X'} cls={'cmark ' + (c.ok ? 'good' : 'bad')} />
+                  </button>
                 )
               })}
             </div>

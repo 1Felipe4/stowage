@@ -129,6 +129,8 @@ export interface Check {
   focus: number[]
   /** true when re-arranging the deck can change this check's outcome */
   pos: boolean
+  /** a compact reading like "6/8", for the gauge on the checklist tile */
+  vl: string
 }
 
 export interface EvalResult {

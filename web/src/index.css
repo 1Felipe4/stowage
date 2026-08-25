@@ -10,6 +10,9 @@
   --red:#EF4444; --red2:#F87171; --purple:#A78BFA; --purple2:#8B5CF6;
   --ink:#E2E8F0; --ink2:#F1F5F9; --ink3:#CBD5E1;
   --mut:#94A3B8; --mut2:#7C8CA3; --mut3:#64748B; --mut4:#475569; --mut5:#334155; --co:#4D6B8A;
+  /* semantic tokens from the design: what a colour MEANS on this deck */
+  --pow:#34D399; --drw:#FBBF24; --hot:#F87171; --cold:#60A5FA; --soul:#A78BFA;
+  --massc:#7C8CA3; --cred:#F59E0B; --paid:#34D399; --warpc:#A78BFA;
   --mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
   --sans:'Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
 }
@@ -571,3 +574,51 @@ svg.map{display:block;width:100%;height:auto}
  border:1px solid var(--line2);background:var(--card);color:var(--mut);cursor:pointer}
 .zbtn .ic{width:14px;height:14px}
 .zoombar span{font-family:var(--mono);font-size:9px;letter-spacing:.06em;color:var(--mut4)}
+
+/* ---------- semantic icon colours ---------- */
+.ic.pow{color:var(--pow)} .ic.drw{color:var(--drw)} .ic.hot{color:var(--hot)}
+.ic.cold{color:var(--cold)} .ic.soul{color:var(--soul)} .ic.mass{color:var(--massc)}
+.ic.cred{color:var(--cred)} .ic.paid{color:var(--paid)} .ic.good{color:var(--pow)}
+.ic.bad{color:var(--red)} .ic.warm{color:#FB923C}
+
+/* ---------- inspection tiles with gauges ---------- */
+.checktiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(58px,1fr));gap:6px}
+.ctile{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+ padding:11px 4px 9px;border-radius:11px;border:1px solid var(--line3);background:var(--card2);cursor:pointer}
+.ctile.no{border-color:rgba(239,68,68,.45);background:rgba(239,68,68,.07)}
+.ctile .ic{width:17px;height:17px;flex-shrink:0}
+.ctile .cbar{display:block;width:68%;height:3px;border-radius:9999px;overflow:hidden;background:rgba(148,163,184,.14);margin-top:1px}
+.ctile .cbar i{display:block;height:100%;border-radius:9999px}
+.ctile .cbar i.good{background:var(--green)} .ctile .cbar i.warm{background:#FB923C} .ctile .cbar i.bad{background:var(--red)}
+.ctile .cvl{font-family:var(--mono);font-size:8.5px;letter-spacing:.06em;color:var(--mut2)}
+.ctile.no .cvl{color:var(--red2)}
+.ctile .ic.cmark{position:absolute;top:4px;right:5px;width:10px;height:10px}
+.ctile .ic.cmark.good{color:rgba(16,185,129,.65)}
+
+/* chips take their tint from the semantic token, per the design's G() */
+.dchip.pow{border-color:color-mix(in srgb,var(--pow) 40%,transparent);color:var(--pow)}
+.dchip.drw{border-color:color-mix(in srgb,var(--drw) 40%,transparent);color:var(--drw)}
+.dchip.hot{border-color:color-mix(in srgb,var(--hot) 40%,transparent);color:var(--hot)}
+.dchip.cold{border-color:color-mix(in srgb,var(--cold) 40%,transparent);color:var(--cold)}
+.dchip.soul{border-color:color-mix(in srgb,var(--soul) 40%,transparent);color:var(--soul)}
+.dchip.mass{border-color:color-mix(in srgb,var(--massc) 40%,transparent);color:var(--massc)}
+.dchip.cred{border-color:color-mix(in srgb,var(--cred) 40%,transparent);color:var(--cred)}
+
+/* ---------- deck cell: heat as pips and a wash, not arithmetic ---------- */
+.cell .tint{position:absolute;inset:0;pointer-events:none}
+.cell .tint.warm{background:linear-gradient(to top,rgba(251,146,60,.18),transparent 72%)}
+.cell .tint.over{background:linear-gradient(to top,rgba(239,68,68,.26),transparent 72%)}
+.cell .tint.cool{background:linear-gradient(to top,rgba(96,165,250,.16),transparent 72%)}
+.cell .pips{position:absolute;top:5px;right:5px;display:flex;flex-direction:column;gap:2px}
+.cell .pips i{display:block;width:3px;height:4px;border-radius:9999px;background:rgba(148,163,184,.14)}
+.cell .pips i.lit{background:var(--drw)} .cell .pips i.warm{background:#FB923C}
+.cell .pips i.over{background:var(--red)} .cell .pips i.cool{background:var(--cold)}
+.cell .overbadge{position:absolute;bottom:4px;right:4px;padding:1px 4px;border-radius:6px;font-family:var(--mono);
+ font-size:9px;font-weight:700;background:rgba(239,68,68,.18);border:1px solid rgba(239,68,68,.6);color:var(--red2)}
+.cell.cargo .code{color:var(--cred);font-size:11px;font-weight:700}
+.directive .dsubj{display:inline-flex;align-items:center;gap:5px;margin-right:8px;vertical-align:-2px}
+.directive .dsubj .ic{width:16px;height:16px}
+.directive .dsubj b{font-family:var(--mono);font-size:12px;font-weight:700;opacity:.85}
+@media (min-width:1080px){
+  .cell .pips i{height:5px}
+}

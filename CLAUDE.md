@@ -48,6 +48,8 @@ can land later without re-architecting.
   zero/negative par and a run that beats it.
 - `npx tsx web/test/detail.ts` — drop semantics (move, swap, self, blocked cell,
   hold-to-bay) and that the detail sheet opens and closes for every entity.
+- `npx tsx web/test/icons.ts` — every icon referenced by data, lessons or
+  components resolves to vendored art (catches a rename leaving a blank square).
 
 Note the pilot is **noisy**: travel events use unseeded randomness, so 15-run
 samples swing ~10 points. Use 40+ runs before believing a winnability number.
@@ -111,6 +113,23 @@ not have, so each ship is a different shape to solve:
   generator promised plans a 14-bay deck could not physically hold.
 - Saves re-resolve `hull` by id from `HULLS` on load, so balance changes reach
   old saves instead of a frozen copy travelling forward.
+
+## Iconography and colour
+
+- The design draws with **lucide**. We do not load the Iconify CDN — it would
+  break offline PWA play and needs a CSP hole. `scripts/gen-lucide.mjs` vendors
+  only the icons the design references from `lucide-static` (ISC) into
+  `web/src/ui/lucide.ts` (~10KB). Add a name to that script's list and re-run it.
+- `Icon.tsx` maps game codes (`RCT`, `CARGO`, `POWER`) onto lucide names, so
+  component code never hardcodes art. `web/test/icons.ts` fails the build if any
+  referenced icon has no art behind it.
+- Colour is **semantic**, per the design's CG tokens: `--pow` green (power made),
+  `--drw` amber (power drawn), `--hot` red, `--cold` blue, `--soul` purple,
+  `--massc` grey, `--cred` amber (money). Use the meaning, not the hue.
+- Heat on a deck cell reads as a column of **pips** plus a colour wash, with an
+  over-cap badge — not a bare number. The inspection checklist is a row of
+  **gauge tiles** (subject icon, fill bar, reading like `6/8`), each opening the
+  detail sheet. `Check.vl` carries that reading.
 
 ## Handling the deck
 

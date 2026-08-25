@@ -170,12 +170,16 @@ export function evaluate(g: Cell[]): EvalResult {
     for (let i = 0; i < TILES; i++) if (g[i] === k) o.push(i)
     return o
   }
-  const push = (lb: string, ok: boolean, dt: string, f?: number[], pos = false) => chk.push({ lb, ok, dt, focus: f || [], pos })
+  const push = (lb: string, ok: boolean, dt: string, f?: number[], pos = false, vl = '') =>
+    chk.push({ lb, ok, dt, focus: f || [], pos, vl })
 
   push(
     'ALL STOWED',
     R.hold.length === 0,
-    R.hold.length ? `${R.hold.length} item${R.hold.length > 1 ? 's' : ''} loose in the hold.` : 'Nothing loose in the hold.'
+    R.hold.length ? `${R.hold.length} item${R.hold.length > 1 ? 's' : ''} loose in the hold.` : 'Nothing loose in the hold.',
+    [],
+    false,
+    String(R.hold.length)
   )
 
   let prod = 0,
@@ -186,7 +190,7 @@ export function evaluate(g: Cell[]): EvalResult {
     if (m.power > 0) prod += m.power
     else draw += -m.power
   }
-  push('POWER', prod >= draw, prod >= draw ? `${prod} made, ${draw} drawn.` : `Short ${draw - prod} power.`)
+  push('POWER', prod >= draw, prod >= draw ? `${prod} made, ${draw} drawn.` : `Short ${draw - prod} power.`, [], false, `${prod}/${draw}`)
 
   const hot: number[] = []
   for (let i = 0; i < TILES; i++) if (g[i] && heat[i] > HEATCAP) hot.push(i)
@@ -197,20 +201,21 @@ export function evaluate(g: Cell[]): EvalResult {
       ? `No bay above ${HEATCAP}.`
       : hot.map((i) => `${modOf(g[i])!.name} at ${bayName(i)} reads ${heat[i]}`).join('. ') + '.',
     hot,
-    true
+    true,
+    `${g.reduce((a, k, i) => (k ? Math.max(a, heat[i]) : a), 0)}/${HEATCAP}`
   )
 
   const thr = at('THR').length
-  push('THRUST', thr >= 2, thr >= 2 ? `${thr} engines fitted.` : `${thr} of 2 engines. You cannot move.`, at('THR'))
+  push('THRUST', thr >= 2, thr >= 2 ? `${thr} engines fitted.` : `${thr} of 2 engines. You cannot move.`, at('THR'), false, `${thr}/2`)
 
   const s = souls()
   const bc = at('BRT').length * 2
-  push('BUNKS', bc >= s, bc >= s ? `${bc} bunks for ${s}.` : `${bc} bunks, ${s - bc} with nowhere to sleep.`, at('BRT'))
+  push('BUNKS', bc >= s, bc >= s ? `${bc} bunks for ${s}.` : `${bc} bunks, ${s - bc} with nowhere to sleep.`, at('BRT'), false, `${bc}/${s}`)
   const ac = at('LSP').length * 2
-  push('LIFE SUPPORT', ac >= s, ac >= s ? `Air for ${ac}, ${s} aboard.` : `Air for ${ac}. ${s - ac} short.`, at('LSP'))
+  push('LIFE SUPPORT', ac >= s, ac >= s ? `Air for ${ac}, ${s} aboard.` : `Air for ${ac}. ${s - ac} short.`, at('LSP'), false, `${ac}/${s}`)
 
   const fc = fuelCap(g)
-  push('FUEL TANKS', fc >= R.fuel, fc >= R.fuel ? `${R.fuel} of ${fc} held.` : `${R.fuel - fc} fuel would be vented.`, at('TNK'))
+  push('FUEL TANKS', fc >= R.fuel, fc >= R.fuel ? `${R.fuel} of ${fc} held.` : `${R.fuel - fc} fuel would be vented.`, at('TNK'), false, `${R.fuel}/${fc}`)
 
   R.cargo.forEach((c, n) => {
     if (!c.aboard) return
