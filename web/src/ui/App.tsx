@@ -3,14 +3,13 @@ import { capacity, fuelCap, massOf, powerBalance } from '../engine/core'
 import { coord, here } from '../engine/actions'
 import { rebuildTransient } from '../engine/map'
 import { R, emit, getVersion, setR, subscribe, ui } from '../engine/state'
-import type { GameState } from '../engine/types'
 import { loadSave } from '../net/saves'
 import { EndView } from './EndView'
 import { Icon } from './Icon'
 import { RunView } from './RunView'
 import { LessonsScreen, MenuScreen, ScoresScreen } from './Screens'
 import { loadScores } from '../net/scores'
-import { HULLS, STARTER } from '../engine/data'
+import { migrate } from '../engine/migrate'
 
 let booted = false
 
@@ -73,11 +72,10 @@ export default function App() {
     if (booted) return
     booted = true
     void loadSave().then((saved) => {
-      const s = saved as GameState | null
-      if (s && s.nodes && s.grid && s.hull) {
-        // re-resolve the hull from the current table so an older save picks up
-        // today's traits and silhouette instead of a frozen copy
-        s.hull = HULLS.find((h) => h.id === s.hull.id) ?? STARTER
+      // every save goes through migrate(): schemas have moved on since some
+      // runs were written, and a stale shape used to crash the bridge
+      const s = migrate(saved)
+      if (s) {
         setR(s)
         rebuildTransient()
         ui.view = 'run'

@@ -95,7 +95,7 @@ export const TUT: TutStep[] = [
     tab: 'port',
     portTab: 'ships',
     title: 'Yards sell hulls.',
-    body: 'Warp points always deal, and some ports do. Your skiff has twelve bays; everything bigger is a different shape you re-stow from scratch. That is what your profit is for.',
+    body: 'Warp points always deal, and some ports do. Your skiff has fourteen bays; everything bigger is a different shape you re-stow from scratch. That is what your profit is for.',
     done: () => R.hull.id !== 'skiff'
   }
 ]

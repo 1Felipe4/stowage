@@ -118,7 +118,7 @@ export const HULLS: Hull[] = [
   {
     id: 'skiff', name: 'Yard skiff', tier: 0, price: 0,
     base: 4, heatCap: 5, fuelMult: 1.0,
-    blocked: [14, 15, 16, 17, 18, 19], // 14 bays: a full block with a stub tail
+    blocked: [0, 3, 16, 17, 18, 19], // 14 bays: clipped bow, short body
     credits: 1.0, crew: ['HAND', 'HAND'],
     mods: ['RCT', 'THR', 'THR', 'LSP', 'BRT', 'TNK', 'TNK'],
     blurb: 'Fourteen bays and nothing spare. Every run starts here — trade up the moment you can afford to.'

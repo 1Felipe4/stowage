@@ -265,7 +265,7 @@ export function RunView() {
     contracts: R.cargo.filter(
       (c) => (!c.taken && !c.done && c.at === R.at && R.grid.includes(null)) || (!c.done && c.to === R.at && !c.aboard)
     ).length,
-    ships: n.ships.filter((id) => id !== R.hull.id && R.credits >= shipPrice(id)).length
+    ships: (n.ships ?? []).filter((id) => id !== R.hull.id && R.credits >= shipPrice(id)).length
   }
 
   const sortedChecks = res.checks.slice().sort((a, b) => (a.ok === b.ok ? 0 : a.ok ? 1 : -1))
@@ -403,7 +403,7 @@ export function RunView() {
         {/* ---------------- PORT ---------------- */}
         <section className={'pane pane-port' + (ui.tab === 'port' ? ' on' : '') + (tutStep?.tab === 'port' ? ' lit' : '')}>
           <div className="seg">
-            {(['market', 'crew', 'contracts', ...(n.ships.length ? (['ships'] as PortTab[]) : [])] as PortTab[]).map((t) => (
+            {(['market', 'crew', 'contracts', ...((n.ships ?? []).length ? (['ships'] as PortTab[]) : [])] as PortTab[]).map((t) => (
               <button className={ui.portTab === t ? 'on' : ''} key={t} onClick={() => setPortTab(t)}>
                 {t === 'market' ? 'Market' : t === 'crew' ? 'Crew' : t === 'contracts' ? 'Contracts' : 'Ships'}
                 {attention[t] > 0 && <i className="segdot" />}
@@ -538,7 +538,7 @@ export function RunView() {
                   <div className="sv amber">{tradeIn()}</div>
                 </div>
               </div>
-              {n.ships.map((id) => {
+              {(n.ships ?? []).map((id) => {
                 const h = HULLS.find((x) => x.id === id)
                 if (!h) return null
                 const net = shipPrice(id)

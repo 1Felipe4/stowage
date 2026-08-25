@@ -42,6 +42,8 @@ can land later without re-architecting.
   board, deterministic per seed, and never load-bearing for rules.
 - `npx tsx web/test/ships.ts` — silhouettes, traits, dealer placement/tiers, and
   trading up (net price, modules to hold, refusals).
+- `npx tsx web/test/migrate.ts` — legacy saves load: missing `ships`, retired hull
+  ids, modules stranded in cells a hull lacks, over-cap fuel, and junk input.
 
 The pilot starts every run on the starter, like real play, and reports per-stage
 clear rates. The healthy shape is a forgiving stage 1 (~83%) falling off from
@@ -102,6 +104,17 @@ not have, so each ship is a different shape to solve:
   generator promised plans a 14-bay deck could not physically hold.
 - Saves re-resolve `hull` by id from `HULLS` on load, so balance changes reach
   old saves instead of a frozen copy travelling forward.
+
+## Save migration (read before adding a field)
+
+`engine/migrate.ts` runs on **every** load, server or offline cache. Saves outlive
+schemas: a run written before shipyards has nodes with no `ships`, and reading
+`n.ships.filter(...)` on one of those crashed the bridge in production. When you
+add a field to `GameState` or `NodeT`, add its default here in the same commit.
+It also re-resolves the hull by id, backfills `ambient`/`delivered`, moves modules
+out of cells the current hull no longer has (into the hold, to re-stow), clamps
+fuel to the tanks fitted, and refuses junk outright rather than half-loading it.
+`web/test/migrate.ts` covers all of that, including the exact production crash.
 
 ## Contract flavour
 
