@@ -170,6 +170,7 @@ export function buyMod(k: ModCode) {
   if (i < 0) return
   R.credits -= MOD[k].price
   R.spend += MOD[k].price
+  R.capex += MOD[k].price
   R.grid[i] = k
   say(`Bought ${MOD[k].name}, stowed at ${bayName(i)}.`)
   touch()
@@ -196,6 +197,7 @@ export function sellMod(k: ModCode, from: 'bay' | 'hold', idx?: number) {
   const v = sellValue(k)
   R.credits += v
   R.spend -= v
+  R.capex -= v
   if (k === 'TNK' && R.fuel > fuelCap()) {
     const lost = R.fuel - fuelCap()
     R.fuel = fuelCap()
@@ -211,6 +213,7 @@ export function hire(id: HireId) {
   if (R.credits < h.price) return
   R.credits -= h.price
   R.spend += h.price
+  R.capex += h.price
   R.crew.push(id)
   if (h.spec && !R.specs.includes(h.spec)) R.specs.push(h.spec)
   say(`Signed on a ${h.name.toLowerCase()}.`)
@@ -262,7 +265,7 @@ export function doWarp() {
   R.credits -= wages + penalty
   R.spend += wages + penalty
   R.summary = {
-    wages, penalty, forfeits: forfeits.map((c) => c.short),
+    wages, penalty, capex: R.capex, forfeits: forfeits.map((c) => c.short),
     opening: R.opening, revenue: R.revenue, spend: R.spend,
     profit: R.credits - R.opening, best: Math.round(R.best!.profit)
   }
@@ -361,6 +364,7 @@ export function buyShip(id: string) {
   if (R.credits < net) return
   R.credits -= net
   R.spend += net
+  R.capex += net
   // everything stowed comes with you, loose in the hold
   const carried = R.grid.filter(Boolean) as string[]
   R.hull = h

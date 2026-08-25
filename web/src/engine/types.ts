@@ -148,11 +148,14 @@ export interface BestPlan {
 export interface Summary {
   wages: number
   penalty: number
+  /** spend on kit and crew you still have at the end of the stage */
+  capex: number
   forfeits: string[]
   opening: number
   revenue: number
   spend: number
   profit: number
+  /** the solver's conservative par for this stage, not a ceiling */
   best: number
 }
 
@@ -181,6 +184,8 @@ export interface GameState {
   opening: number
   revenue: number
   spend: number
+  /** the slice of spend that bought things you keep: modules, crew, hulls */
+  capex: number
   wage: number
   warpCost: number
   margin: number

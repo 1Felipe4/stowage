@@ -3,6 +3,7 @@ import { newRun, pressOn, retire } from '../engine/actions'
 import { R } from '../engine/state'
 import { Icon } from './Icon'
 import { ShareSheet } from './ShareSheet'
+import { starLine, stars, verdict } from '../engine/rating'
 
 export function EndView() {
   const s = R.summary,
@@ -29,13 +30,22 @@ export function EndView() {
                   <dt>REVENUE</dt>
                   <dd className="up">+{s.revenue}</dd>
                 </div>
-                <div>
-                  <dt>SHIP &amp; FUEL</dt>
-                  {(() => {
-                    const net = s.spend - s.wages - s.penalty
-                    return <dd className={net > 0 ? 'dn' : 'up'}>{net > 0 ? `−${net}` : `+${-net}`}</dd>
-                  })()}
-                </div>
+                {(() => {
+                  const capex = s.capex ?? 0
+                  const fuel = s.spend - s.wages - s.penalty - capex
+                  return (
+                    <>
+                      <div>
+                        <dt>FUEL BURNED</dt>
+                        <dd className={fuel > 0 ? 'dn' : 'up'}>{fuel > 0 ? `−${fuel}` : `+${-fuel}`}</dd>
+                      </div>
+                      <div>
+                        <dt>KIT &amp; CREW · YOURS TO KEEP</dt>
+                        <dd className={capex > 0 ? 'dn' : 'up'}>{capex > 0 ? `−${capex}` : `+${-capex}`}</dd>
+                      </div>
+                    </>
+                  )
+                })()}
                 <div>
                   <dt>WAGES</dt>
                   <dd className="dn">−{s.wages}</dd>
@@ -51,9 +61,20 @@ export function EndView() {
                   <dd>{R.credits}</dd>
                 </div>
               </div>
+              {(() => {
+                const n = stars(s.profit, s.best)
+                return (
+                  <div className="rating">
+                    <div className={'starrow s' + n}>{starLine(n)}</div>
+                    <div className="ratesub">{verdict(s.profit, s.best)}</div>
+                    <div className="ratepar">
+                      PAR FOR THIS PLAN WAS {s.best} — an estimate, and a beatable one
+                    </div>
+                  </div>
+                )
+              })()}
               <div className="sub">
-                {R.hull.name.toUpperCase()} · BEST POSSIBLE HERE WAS {s.best} · {R.cleared} STAGE
-                {R.cleared === 1 ? '' : 'S'} CLEARED
+                {R.hull.name.toUpperCase()} · {R.cleared} STAGE{R.cleared === 1 ? '' : 'S'} CLEARED
               </div>
             </div>
           ) : (

@@ -1,4 +1,5 @@
 import { R } from '../engine/state'
+import { starLine, stars } from '../engine/rating'
 
 /* Draws the end-of-run card to a canvas and hands back a PNG blob. Everything
    is painted by hand — no html2canvas, no network — so it works offline in the
@@ -90,6 +91,9 @@ export interface ShareFacts {
   credits: number
   seed: string
   best?: number
+  /** 0-5 against par, and the glyph row for it */
+  stars?: number
+  starRow?: string
   /** the last thing delivered, named — the bit people actually retell */
   lastRun?: string
   lines: { label: string; val: string; kind: 'up' | 'dn' | '' }[]
@@ -103,7 +107,8 @@ export function shareFacts(): ShareFacts {
   const last = paid[paid.length - 1]
   const lastRun = last?.goods ? `Last run: ${last.goods}${last.client ? ' for ' + last.client : ''}` : undefined
   if (s && cleared) {
-    const net = s.spend - s.wages - s.penalty
+    const capex = s.capex ?? 0
+    const fuelSpend = s.spend - s.wages - s.penalty - capex
     return {
       headline: s.profit >= 0 ? `PROFIT ${s.profit}` : `LOSS ${Math.abs(s.profit)}`,
       verdict: s.profit >= 0 ? 'profit' : 'loss',
@@ -114,11 +119,14 @@ export function shareFacts(): ShareFacts {
       credits: R.credits,
       seed: R.seed,
       best: s.best,
+      stars: stars(s.profit, s.best),
+      starRow: starLine(stars(s.profit, s.best)),
       lastRun,
       lines: [
         { label: 'OPENED WITH', val: String(s.opening), kind: '' },
         { label: 'REVENUE', val: `+${s.revenue}`, kind: 'up' },
-        { label: 'SHIP & FUEL', val: net > 0 ? `−${net}` : `+${-net}`, kind: net > 0 ? 'dn' : 'up' },
+        { label: 'FUEL BURNED', val: fuelSpend > 0 ? `−${fuelSpend}` : `+${-fuelSpend}`, kind: fuelSpend > 0 ? 'dn' : 'up' },
+        { label: 'KIT & CREW (KEPT)', val: capex > 0 ? `−${capex}` : `+${-capex}`, kind: capex > 0 ? 'dn' : 'up' },
         { label: 'WAGES', val: `−${s.wages}`, kind: 'dn' },
         ...(s.penalty ? [{ label: 'FORFEITS', val: `−${s.penalty}`, kind: 'dn' as const }] : []),
         { label: 'CLOSED WITH', val: String(R.credits), kind: '' }
@@ -144,6 +152,7 @@ export function shareText(f: ShareFacts): string {
   const bits = [
     `STOWAGE — ${f.headline}`,
     `${f.hull} · stage ${f.stage} · ${f.cleared} cleared · ${f.credits} credits`,
+    ...(f.starRow ? [`${f.starRow}  ${f.stars}/5 against par ${f.best}`] : []),
     ...(f.lastRun ? [f.lastRun] : []),
     `Plan ${f.seed}`
   ]
@@ -289,11 +298,15 @@ export async function drawShareCard(): Promise<{ blob: Blob; url: string; facts:
     y += boxH + 26
   }
 
-  if (f.best !== undefined) {
-    mono(ctx, 22, 500)
+  if (f.starRow) {
+    sans(ctx, 40, 700)
+    ctx.fillStyle = f.stars! >= 5 ? C.amber : f.stars! >= 4 ? C.green : f.stars! >= 3 ? C.blue : C.mut2
+    ctx.fillText(f.starRow, PAD, y + 34)
+    const starW = ctx.measureText(f.starRow).width
+    mono(ctx, 20, 500)
     ctx.fillStyle = C.mut4
-    ctx.fillText(`BEST POSSIBLE ON THIS PLAN WAS ${f.best}`, PAD, y + 24)
-    y += 56
+    ctx.fillText(`${f.stars}/5 AGAINST A PAR OF ${f.best}`, PAD + starW + 24, y + 30)
+    y += 66
   }
 
   // footer

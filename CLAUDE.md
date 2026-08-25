@@ -44,6 +44,11 @@ can land later without re-architecting.
   trading up (net price, modules to hold, refusals).
 - `npx tsx web/test/migrate.ts` — legacy saves load: missing `ships`, retired hull
   ids, modules stranded in cells a hull lacks, over-cap fuel, and junk input.
+- `npx tsx web/test/rating.ts` — star bands either side of par, including a
+  zero/negative par and a run that beats it.
+
+Note the pilot is **noisy**: travel events use unseeded randomness, so 15-run
+samples swing ~10 points. Use 40+ runs before believing a winnability number.
 
 The pilot starts every run on the starter, like real play, and reports per-stage
 clear rates. The healthy shape is a forgiving stage 1 (~83%) falling off from
@@ -104,6 +109,21 @@ not have, so each ship is a different shape to solve:
   generator promised plans a 14-bay deck could not physically hold.
 - Saves re-resolve `hull` by id from `HULLS` on load, so balance changes reach
   old saves instead of a frozen copy travelling forward.
+
+## Par, not a ceiling
+
+`R.best.profit` is the solver's estimate and is **conservative by construction**:
+it buys every module at list price and never pawns one back, pays `medFuel` for
+every unit rather than shopping for cheap fuel, and wages every hand it thinks
+the plan needs. Good play beats it routinely. So the end screen never claims it
+was the most you could have made — `engine/rating.ts` grades profit against it
+out of five stars, and beating par is five stars plus an "above par" line.
+If you improve the estimate, keep the grading: a claimed ceiling that players
+routinely exceed reads as a bug in the game.
+
+The stage ledger also splits `capex` (modules, crew, hulls — things you keep)
+from fuel burned, because a stage-1 "loss" is usually capital investment that
+pays off in later stages, and lumping them together hid that.
 
 ## Save migration (read before adding a field)
 
